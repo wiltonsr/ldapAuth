@@ -1,7 +1,7 @@
-displayName: Demo Plugin
+displayName: LDAP Authentication Plugin
 type: middleware
 
-import: github.com/traefik/plugindemo
+import: github.com/wiltonsr/ldapauth
 
 summary: '[Demo] Add Request Header'
 

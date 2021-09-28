@@ -1,3 +1,3 @@
-module github.com/traefik/plugindemo
+module github.com/wiltonsr/ldapauth
 
 go 1.16

@@ -1,5 +1,5 @@
-// Package plugindemo a demo plugin.
-package plugindemo
+// Package ldapauth a ldap authentication plugin.
+package ldapauth
 
 import (
 	"bytes"
