@@ -1,0 +1,11 @@
+displayName: Demo Plugin
+type: middleware
+
+import: github.com/traefik/plugindemo
+
+summary: '[Demo] Add Request Header'
+
+testData:
+  Headers:
+    X-Demo: test
+    X-URL: '{{URL}}'
