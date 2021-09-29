@@ -3,7 +3,7 @@ type: middleware
 
 import: github.com/wiltonsr/ldapauth
 
-summary: '[Demo] Add Request Header'
+summary: 'An open source Traefik Middleware that enables Authentication via LDAP in a similar way to Traefik Enterprise'
 
 testData:
   Headers:
