@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-
 	"github.com/go-ldap/ldap/v3"
 )
 
@@ -25,31 +24,31 @@ type Config struct {
 	Host         string `json:"host,omitempty" yaml:"host,omitempty"`
 	Port         uint16 `json:"port,omitempty" yaml:"port,omitempty"`
 	BaseDn       string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	UserUniqueId string `json:"useruniqueid,omitempty" yaml:"useruniqueid,omitempty"`
+	UserUniqueId string `json:"userUniqueId,omitempty" yaml:"userUniqueId,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		Enabled:        true,
-		Debug:          false,
-		Host:           "example.com",
-		Port:           389,
-		BaseDn:         "dc=example,dc=org",
-		UserUniqueId:   "uid", // Usually uid or sAMAccountname
+		Enabled:      true,
+		Debug:        false,
+		Host:         "ldap://example.com", // Supports: ldap://, ldaps://, ldapi://
+		Port:         389,                  // Usually 389 or 636
+		BaseDn:       "dc=example,dc=org",
+		UserUniqueId: "uid", // Usually uid or sAMAccountname
 	}
 }
 
 // LdapAuth Struct plugin.
 type LdapAuth struct {
-	next     http.Handler
-	name     string
-	config   *Config
+	next   http.Handler
+	name   string
+	config *Config
 }
 
 // New created a new LdapAuth plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	log.Println("Starting", name ,"Middleware...")
+	log.Println("Starting", name, "Middleware...")
 	if config.Debug {
 		log.Println("Enabled       =>", config.Enabled)
 		log.Println("Host          =>", config.Host)
@@ -66,17 +65,17 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 }
 
 func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	
+
 	if !la.config.Enabled {
 		log.Printf("%s Disabled! Passing request...", la.name)
 		la.next.ServeHTTP(rw, req)
 		return
 	}
-	
+
 	user, password, ok := req.BasicAuth()
 
 	if !ok {
-        // No valid 'Authentication: Basic xxxx' header found in request
+		// No valid 'Authentication: Basic xxxx' header found in request
 		la.RequireAuth(rw, req)
 		return
 	}
@@ -100,11 +99,27 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (la *LdapAuth) ldapCheckUser(user, password string) bool {
-	log.Printf("user=%s password=%s", user, password)
-	if user == "john" {
-		return true
+	conn, err := ldap.DialURL(fmt.Sprintf("%s:%d", la.config.Host, la.config.Port))
+	if err != nil {
+		log.Printf("Connection failed")
+		return false
+	} else {
+		defer conn.Close()
+		filter := fmt.Sprintf("(%s=%s)", la.config.UserUniqueId, user)
+		log.Printf("Filter => %s\n", filter)
+		attributes := []string{la.config.UserUniqueId}
+		log.Printf("Attributes => %s\n", attributes)
+		search := ldap.NewSearchRequest(la.config.BaseDn, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
+		cur, err := conn.Search(search)
+		log.Println(cur)
+		log.Println(err)
+		if err != nil || len(cur.Entries) != 1 {
+			log.Printf("Search failed")
+			return false
+		} else {
+			return conn.Bind(cur.Entries[0].DN, password) == nil
+		}
 	}
-	return false
 }
 
 func (la *LdapAuth) RequireAuth(w http.ResponseWriter, req *http.Request) {
