@@ -1,4 +1,4 @@
-module github.com/wiltonsr/ldapauth
+module github.com/wiltonsr/ldapAuth
 
 go 1.17
 

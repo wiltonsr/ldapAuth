@@ -1,4 +1,4 @@
-package ldapauth_test
+package ldapAuth_test
 
 import (
 	"context"

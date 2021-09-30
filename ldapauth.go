@@ -1,5 +1,5 @@
 // Package LdapAuth a ldap authentication plugin.
-package ldapauth
+package ldapAuth
 
 import (
 	"context"

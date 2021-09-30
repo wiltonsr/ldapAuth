@@ -1,7 +1,7 @@
-displayName: LDAP Authentication Plugin
+displayName: ldapAuth
 type: middleware
 
-import: github.com/wiltonsr/ldapauth
+import: github.com/wiltonsr/ldapAuth
 
 summary: 'An open source Traefik Middleware that enables Authentication via LDAP in a similar way to Traefik Enterprise'
 
