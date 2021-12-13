@@ -2,11 +2,12 @@
 
 This project is an in progress effort to create an open source middleware that enables authentication via LDAP in a similar way to [Traefik Enterprise](https://doc.traefik.io/traefik-enterprise/middlewares/ldap/).
 
-## Caution
+## Requirements
 
-[Traefik](https://traefik.io) plugins are developed using the compiled [Go language](https://golang.org). Rather than being pre-compiled and linked, however, plugins are executed on the fly by [Yaegi](https://github.com/traefik/yaegi), an embedded Go interpreter.
+- Yaegi [v0.11.1](https://github.com/traefik/yaegi/releases/tag/v0.11.1)
+- Traefik [v2.5.5](https://github.com/traefik/traefik/releases/tag/v2.5.5)
 
-Due to this Yaegi [issue](https://github.com/traefik/yaegi/issues/1275), the `ldap-go` module still does not work correctly. **Therefore this plugin is not ready for production**.
+[Traefik](https://traefik.io) plugins are developed using the compiled [Go language](https://golang.org). Rather than being pre-compiled and linked, however, plugins are executed on the fly by [Yaegi](https://github.com/traefik/yaegi), an embedded Go interpreter. Due to [traefik/yaegi#1275](https://github.com/traefik/yaegi/issues/1275), the `ldap-go` module only works after the listed version.
 
 ## Usage
 
@@ -18,16 +19,16 @@ whoami:
     - "traefik.enable=true"
     - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
     - "traefik.http.routers.whoami.entrypoints=web"
-    # ldapAuth Register Middleware ====================================================
-    - "traefik.http.routers.whoami.middlewares=ldap_auth"                             #
-    # ldapAuth Option =================================================================
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"               #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                 #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.host=ldap.forumsys.com"     #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                   #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDn=dc=example,dc=com"   #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueId=uid"           #
-    # =================================================================================
+    # ldapAuth Register Middleware =======================================================
+    - "traefik.http.routers.whoami.middlewares=ldap_auth"                                #
+    # ldapAuth Options====================================================================
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"                  #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                    #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.host=ldap://ldap.forumsys.com" #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                      #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDn=dc=example,dc=com"      #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueId=uid"              #
+    # ====================================================================================
 ```
 
 ## Options

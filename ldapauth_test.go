@@ -6,21 +6,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/wiltonsr/ldapauth"
+	"github.com/wiltonsr/ldapAuth"
 )
 
 func TestDemo(t *testing.T) {
-	cfg := ldapauth.CreateConfig()
-	cfg.Headers["X-Host"] = "[[.Host]]"
-	cfg.Headers["X-Method"] = "[[.Method]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-Demo"] = "test"
+	cfg := ldapAuth.CreateConfig()
 
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
 
-	handler, err := ldapauth.New(ctx, next, cfg, "demo-plugin")
+	handler, err := ldapAuth.New(ctx, next, cfg, "ldapAuth")
 	if err != nil {
 		t.Fatal(err)
 	}
