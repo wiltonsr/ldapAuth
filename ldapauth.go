@@ -3,6 +3,7 @@ package ldapAuth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -72,19 +73,20 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var err error
 	user, password, ok := req.BasicAuth()
 
 	if !ok {
-		// No valid 'Authentication: Basic xxxx' header found in request
-		la.RequireAuth(rw, req)
+		err = errors.New("no valid 'Authentication: Basic xxxx' header found in request")
+		la.RequireAuth(rw, req, err)
 		return
 	}
 
-	isValidUser := la.ldapCheckUser(user, password)
+	isValidUser, err := la.ldapCheckUser(user, password)
 
 	if !isValidUser {
 		log.Printf("Authentication failed")
-		la.RequireAuth(rw, req)
+		la.RequireAuth(rw, req, err)
 		return
 	} else {
 		log.Printf("Authentication succeeded")
@@ -93,16 +95,17 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Sanitize Some Headers Infos
 	req.URL.User = url.User(user)
 	req.Header["LDAP-User"] = []string{user}
+	// Prevent expose username and password on Header
 	req.Header.Del("Authorization")
 
 	la.next.ServeHTTP(rw, req)
 }
 
-func (la *LdapAuth) ldapCheckUser(user, password string) bool {
+func (la *LdapAuth) ldapCheckUser(user, password string) (bool, error) {
 	conn, err := ldap.DialURL(fmt.Sprintf("%s:%d", la.config.Host, la.config.Port))
 	if err != nil {
 		log.Printf("Connection failed")
-		return false
+		return false, err
 	} else {
 		defer conn.Close()
 		filter := fmt.Sprintf("(%s=%s)", la.config.UserUniqueId, user)
@@ -111,20 +114,19 @@ func (la *LdapAuth) ldapCheckUser(user, password string) bool {
 		log.Printf("Attributes => %s\n", attributes)
 		search := ldap.NewSearchRequest(la.config.BaseDn, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
 		cur, err := conn.Search(search)
-		log.Println(cur)
-		log.Println(err)
 		if err != nil || len(cur.Entries) != 1 {
-			log.Printf("Search failed")
-			return false
+			err = errors.New("empty search")
+			return false, err
 		} else {
-			return conn.Bind(cur.Entries[0].DN, password) == nil
+			err = conn.Bind(cur.Entries[0].DN, password)
+			return err == nil, err
 		}
 	}
 }
 
-func (la *LdapAuth) RequireAuth(w http.ResponseWriter, req *http.Request) {
+func (la *LdapAuth) RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
 	w.Header().Set(contentType, "text/plan")
 	w.Header().Set("WWW-Authenticate", `Basic realm="`+defaultRealm+`"`)
-	w.WriteHeader(401)
-	w.Write([]byte(fmt.Sprintf("%d %s bbb\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))))
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte(fmt.Sprintf("%d %s\nError: %s", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
 }

@@ -3,9 +3,12 @@ type: middleware
 
 import: github.com/wiltonsr/ldapAuth
 
-summary: 'An open source Traefik Middleware that enables Authentication via LDAP in a similar way to Traefik Enterprise'
+summary: "An open source Traefik Middleware that enables Authentication via LDAP in a similar way to Traefik Enterprise"
 
 testData:
-  Headers:
-    X-Demo: test
-    X-URL: '{{URL}}'
+  Enabled: true
+  Debug: false
+  Host: "ldap://example.com"
+  Port: 389
+  BaseDn: "dc=example,dc=org"
+  UserUniqueId: "uid"
