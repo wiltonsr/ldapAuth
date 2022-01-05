@@ -12,3 +12,6 @@ testData:
   Port: 389
   BaseDn: "dc=example,dc=org"
   UserUniqueId: "uid"
+  AllowedGroups:
+    - "ou=group1,dc=example,dc=com"
+    - "ou=subgroup1,ou=group2,dc=example,dc=com"

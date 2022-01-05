@@ -21,17 +21,18 @@ const (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled               bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Debug                 bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
-	Url                   string `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                  uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	UserUniqueID          string `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
-	BaseDN                string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
-	BindPassword          string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername       bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization  bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	Enabled               bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Debug                 bool     `json:"debug,omitempty" yaml:"debug,omitempty"`
+	Url                   string   `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                  uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	UserUniqueID          string   `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
+	BaseDN                string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                string   `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
+	BindPassword          string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	ForwardUsername       bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization  bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	AllowedGroups         []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -48,6 +49,7 @@ func CreateConfig() *Config {
 		ForwardUsername:       true,
 		ForwardUsernameHeader: "Username",
 		ForwardAuthorization:  false,
+		AllowedGroups:         nil,
 	}
 }
 
