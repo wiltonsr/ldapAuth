@@ -11,7 +11,6 @@ import (
 	"reflect"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/wiltonsr/ldapAuth/ldaputils"
 )
 
 const (
@@ -40,10 +39,10 @@ func CreateConfig() *Config {
 	return &Config{
 		Enabled:               true,
 		Debug:                 false,
-		Url:                   "ldap://example.com", // Supports: ldap://, ldaps://
-		Port:                  389,                  // Usually 389 or 636
-		UserUniqueID:          "uid",                // Usually uid or sAMAccountname
-		BaseDN:                "dc=example,dc=com",
+		Url:                   "",    // Supports: ldap://, ldaps://
+		Port:                  389,   // Usually 389 or 636
+		UserUniqueID:          "uid", // Usually uid or sAMAccountname
+		BaseDN:                "",
 		BindDN:                "",
 		BindPassword:          "",
 		ForwardUsername:       true,
@@ -61,7 +60,7 @@ type LdapAuth struct {
 
 // New created a new LdapAuth plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	log.Println("Starting", name, "Middleware...")
+	log.Printf("Starting %s Middleware...", name)
 
 	logConfig(config)
 
@@ -73,7 +72,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 }
 
 func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-
 	if !la.config.Enabled {
 		log.Printf("%s Disabled! Passing request...", la.name)
 		la.next.ServeHTTP(rw, req)
@@ -89,9 +87,19 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	isValidUser, err := ldapCheckUser(la.config, user, password)
+	conn, err := Connect(la.config.Url, la.config.Port)
+	if err != nil {
+		log.Printf(fmt.Sprintf("%s\n", err))
+		RequireAuth(rw, req, err)
+		return
+	}
+
+	isValidUser, err := ldapCheckUser(conn, la.config, user, password)
+
+	defer conn.Close()
 
 	if !isValidUser {
+		log.Printf(fmt.Sprintf("%s\n", err))
 		log.Printf("Authentication failed")
 		RequireAuth(rw, req, err)
 		return
@@ -116,35 +124,77 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	la.next.ServeHTTP(rw, req)
 }
 
-func ldapCheckUser(config *Config, user, password string) (bool, error) {
-	conn, err := ldaputils.Connect(config.Url, config.Port)
+func ldapCheckUser(conn *ldap.Conn, config *Config, user, password string) (bool, error) {
+	filter := fmt.Sprintf("(%s=%s)", config.UserUniqueID, user)
+	result, err := BindUserSearch(conn, filter, config)
+
+	// Return if search fails
 	if err != nil {
-		log.Printf("Connection failed")
 		return false, err
-	} else {
-		defer conn.Close()
-		filter := fmt.Sprintf("(%s=%s)", config.UserUniqueID, user)
-		log.Printf("Filter => %s\n", filter)
-		attributes := []string{config.UserUniqueID}
-		log.Printf("Attributes => %s\n", attributes)
-		search := ldap.NewSearchRequest(config.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
-		log.Printf("Search => %v\n", search)
-		cur, err := conn.Search(search)
-		if err != nil || len(cur.Entries) != 1 {
-			err = errors.New("empty search")
-			return false, err
-		} else {
-			err = conn.Bind(cur.Entries[0].DN, password)
-			return err == nil, err
-		}
 	}
+
+	userDN := result.Entries[0].DN
+	log.Printf("Authenticating User: %s", userDN)
+
+	// Bind User and password
+	err = conn.Bind(userDN, password)
+	return err == nil, err
 }
 
 func RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
 	w.Header().Set(contentType, "text/plan")
 	w.Header().Set("WWW-Authenticate", `Basic realm="`+defaultRealm+`"`)
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(fmt.Sprintf("%d %s\nError: %s", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
+	w.Write([]byte(fmt.Sprintf("%d %s\nError: %s\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
+}
+
+// Ldap Connection
+func Connect(url string, port uint16) (*ldap.Conn, error) {
+	conn, err := ldap.DialURL(fmt.Sprintf("%s:%d", url, port))
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func BindUserSearch(conn *ldap.Conn, filter string, config *Config) (*ldap.SearchResult, error) {
+	if config.BindDN != "" && config.BindPassword != "" {
+		log.Printf("Performing User BindDN Search")
+		err := conn.Bind(config.BindDN, config.BindPassword)
+
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("BindDN Error: %s", err))
+		}
+	} else {
+		log.Printf("Performing AnonymousBind Search")
+		conn.UnauthenticatedBind("")
+	}
+
+	search := ldap.NewSearchRequest(
+		config.BaseDN,
+		ldap.ScopeWholeSubtree,
+		ldap.NeverDerefAliases,
+		0,
+		0,
+		false,
+		filter,
+		[]string{"dn"},
+		nil,
+	)
+
+	result, err := conn.Search(search)
+
+	if err != nil {
+		log.Printf("Bind Search Error")
+		return nil, err
+	}
+
+	if len(result.Entries) > 0 {
+		return result, nil
+	} else {
+		return nil, errors.New("Couldn't fetch bind search entries")
+	}
 }
 
 func logConfig(config *Config) {

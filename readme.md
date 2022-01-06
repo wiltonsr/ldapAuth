@@ -24,23 +24,66 @@ whoami:
     # ldapAuth Options====================================================================
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"                  #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                    #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.host=ldap://ldap.forumsys.com" #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com" #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                      #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDn=dc=example,dc=com"      #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueId=uid"              #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com"      #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueID=uid"              #
     # ====================================================================================
 ```
 
 ## Options
 
-- `enabled` (Default: `true`) Controls whether requests will be checked against LDAP or not before being delivered.
+##### `enabled`
+*Optional, Default: `true`*
 
-- `debug` (Default: `false`) Enable debug mode to logs for detailed information about plugin operation.
+Controls whether requests will be checked against LDAP or not before being delivered.
 
-- `host` (Default: `example.com`) LDAP server address where queries will be performed.
+##### `debug`
+*Optional, Default: `false`*
 
-- `port` (Default: `389`) LDAP server port where queries will be performed.
+Enable debug mode to logs for detailed information about plugin operation.
 
-- `baseDn` (Default: `dc=example,dc=org`) From where the plugin will search for users.
+##### `url`
+*Required, Default: `""`*
 
-- `userUniqueId` (Default: `uid`) The unique identifier of users.
+LDAP server address where queries will be performed.
+
+##### `port`
+*Optional, Default: `389`*
+
+LDAP server port where queries will be performed.
+
+##### `userUniqueId`
+*Optional, Default: `uid`*
+
+The unique identifier of users. This is used as a filter when performing bind in order to filter the user making the request.
+
+##### `baseDN`
+*Required, Default: `""`*
+
+From where the plugin will search for users.
+
+##### `BindDN`
+*Optional, Default: `""`*
+
+The domain name to bind to in order to authenticate to the LDAP server when search for `User DN`. Leaving this empty means binds are anonymous, which is rarely expected behavior.
+
+##### `BindPassword`
+*Optional, Default: `""`*
+
+The password corresponding to the `bindDN` specified, used in order to authenticate to the LDAP server.
+
+##### `ForwardUsername`
+*Optional, Default: `true`*
+
+The `forwardUsername` option can be enabled to forward the username in a specific header, defined using the `forwardUsernameHeader` option.
+
+##### `ForwardUsernameHeader`
+*Optional, Default: `Username`*
+
+Name of the header to put the username in when forwarding it. This is not used if the `forwardUsername` option is set to `false`.
+
+##### `ForwardAuthorization`
+*Optional, Default: `false`*
+
+The `forwardAuthorization` option determines if the authorization header will be forwarded or stripped from the request after it has been approved by the middleware. `Attention`, enabling this option may expose the password of the LDAP user who is making the request.
