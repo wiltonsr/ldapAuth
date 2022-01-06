@@ -48,6 +48,7 @@ func CreateConfig() *Config {
 		BindPassword:          "",
 		ForwardUsername:       true,
 		ForwardUsernameHeader: "Username",
+		ForwardAuthorization:  false,
 	}
 }
 
@@ -99,10 +100,18 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Sanitize Some Headers Infos
-	req.URL.User = url.User(user)
-	req.Header["LDAP-User"] = []string{user}
-	// Prevent expose username and password on Header
-	req.Header.Del("Authorization")
+	if la.config.ForwardUsername {
+		req.URL.User = url.User(user)
+		req.Header[la.config.ForwardUsernameHeader] = []string{user}
+	}
+
+	/*
+	 Prevent expose username and password on Header
+	 if ForwardAuthorization option is set
+	*/
+	if !la.config.ForwardAuthorization {
+		req.Header.Del("Authorization")
+	}
 
 	la.next.ServeHTTP(rw, req)
 }
