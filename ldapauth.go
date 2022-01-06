@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/wiltonsr/ldapAuth/ldaputils"
 )
 
 const (
@@ -20,23 +21,32 @@ const (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Debug        bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
-	Host         string `json:"host,omitempty" yaml:"host,omitempty"`
-	Port         uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	BaseDn       string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	UserUniqueId string `json:"userUniqueId,omitempty" yaml:"userUniqueId,omitempty"`
+	Enabled               bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Debug                 bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
+	Url                   string `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                  uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+	BindDN                string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
+	BindPassword          string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	BaseDN                string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	UserUniqueID          string `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
+	ForwardUsername       bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization  bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		Enabled:      true,
-		Debug:        false,
-		Host:         "ldap://example.com", // Supports: ldap://, ldaps://, ldapi://
-		Port:         389,                  // Usually 389 or 636
-		BaseDn:       "dc=example,dc=org",
-		UserUniqueId: "uid", // Usually uid or sAMAccountname
+		Enabled:               true,
+		Debug:                 false,
+		Url:                   "ldap://example.com", // Supports: ldap://, ldaps://, ldapi://
+		Port:                  389,
+		BindDN:                "",
+		BindPassword:          "", // Usually 389 or 636
+		BaseDN:                "dc=example,dc=org",
+		UserUniqueID:          "uid", // Usually uid or sAMAccountname
+		ForwardUsername:       true,
+		ForwardUsernameHeader: "Username",
 	}
 }
 
@@ -52,10 +62,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	log.Println("Starting", name, "Middleware...")
 	if config.Debug {
 		log.Println("Enabled       =>", config.Enabled)
-		log.Println("Host          =>", config.Host)
+		log.Println("Url          =>", config.Url)
 		log.Println("Port          =>", config.Port)
-		log.Println("BaseDn        =>", config.BaseDn)
-		log.Println("UserUniqueId  =>", config.UserUniqueId)
+		log.Println("BaseDN        =>", config.BaseDN)
+		log.Println("UserUniqueID  =>", config.UserUniqueID)
 	}
 
 	return &LdapAuth{
@@ -102,17 +112,18 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (la *LdapAuth) ldapCheckUser(user, password string) (bool, error) {
-	conn, err := ldap.DialURL(fmt.Sprintf("%s:%d", la.config.Host, la.config.Port))
+	conn, err := ldaputils.Connect(la.config.Url, la.config.Port)
 	if err != nil {
 		log.Printf("Connection failed")
 		return false, err
 	} else {
 		defer conn.Close()
-		filter := fmt.Sprintf("(%s=%s)", la.config.UserUniqueId, user)
+		filter := fmt.Sprintf("(%s=%s)", la.config.UserUniqueID, user)
 		log.Printf("Filter => %s\n", filter)
-		attributes := []string{la.config.UserUniqueId}
+		attributes := []string{la.config.UserUniqueID}
 		log.Printf("Attributes => %s\n", attributes)
-		search := ldap.NewSearchRequest(la.config.BaseDn, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
+		search := ldap.NewSearchRequest(la.config.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
+		log.Printf("Search => %v\n", search)
 		cur, err := conn.Search(search)
 		if err != nil || len(cur.Entries) != 1 {
 			err = errors.New("empty search")
