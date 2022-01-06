@@ -24,7 +24,7 @@ whoami:
     # ldapAuth Options====================================================================
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"                  #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                    #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com" #
+    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com"  #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                      #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com"      #
     - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueID=uid"              #
