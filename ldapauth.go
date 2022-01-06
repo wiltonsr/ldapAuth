@@ -84,15 +84,15 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		err = errors.New("no valid 'Authentication: Basic xxxx' header found in request")
-		la.RequireAuth(rw, req, err)
+		RequireAuth(rw, req, err)
 		return
 	}
 
-	isValidUser, err := la.ldapCheckUser(user, password)
+	isValidUser, err := ldapCheckUser(la.config, user, password)
 
 	if !isValidUser {
 		log.Printf("Authentication failed")
-		la.RequireAuth(rw, req, err)
+		RequireAuth(rw, req, err)
 		return
 	} else {
 		log.Printf("Authentication succeeded")
@@ -107,18 +107,18 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	la.next.ServeHTTP(rw, req)
 }
 
-func (la *LdapAuth) ldapCheckUser(user, password string) (bool, error) {
-	conn, err := ldaputils.Connect(la.config.Url, la.config.Port)
+func ldapCheckUser(config *Config, user, password string) (bool, error) {
+	conn, err := ldaputils.Connect(config.Url, config.Port)
 	if err != nil {
 		log.Printf("Connection failed")
 		return false, err
 	} else {
 		defer conn.Close()
-		filter := fmt.Sprintf("(%s=%s)", la.config.UserUniqueID, user)
+		filter := fmt.Sprintf("(%s=%s)", config.UserUniqueID, user)
 		log.Printf("Filter => %s\n", filter)
-		attributes := []string{la.config.UserUniqueID}
+		attributes := []string{config.UserUniqueID}
 		log.Printf("Attributes => %s\n", attributes)
-		search := ldap.NewSearchRequest(la.config.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
+		search := ldap.NewSearchRequest(config.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, filter, attributes, nil)
 		log.Printf("Search => %v\n", search)
 		cur, err := conn.Search(search)
 		if err != nil || len(cur.Entries) != 1 {
@@ -131,7 +131,7 @@ func (la *LdapAuth) ldapCheckUser(user, password string) (bool, error) {
 	}
 }
 
-func (la *LdapAuth) RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
+func RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
 	w.Header().Set(contentType, "text/plan")
 	w.Header().Set("WWW-Authenticate", `Basic realm="`+defaultRealm+`"`)
 	w.WriteHeader(http.StatusUnauthorized)
