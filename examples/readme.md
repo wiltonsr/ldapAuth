@@ -5,13 +5,19 @@ We use [Forumsys LDAP Test Server](https://www.forumsys.com/tutorials/integratio
 We could perform a Anonymous Bind:
 
 ```bash
-$ ldapsearch -x -b "dc=example,dc=com" -H ldap://ldap.forumsys.com
+ldapsearch -x \
+  -b "dc=example,dc=com" \
+  -H ldap://ldap.forumsys.com
 ```
 
 Or Authenticated Bind:
 
 ```bash
-$ ldapsearch -x -b "dc=example,dc=com" -H ldap://ldap.forumsys.com -D "uid=tesla,dc=example,dc=com" -w password
+ldapsearch -x \
+  -b "dc=example,dc=com" \
+  -H ldap://ldap.forumsys.com \
+  -D "uid=tesla,dc=example,dc=com" \
+  -w password
 ```
 
 And the Output will be like this:
@@ -294,23 +300,29 @@ result: 0 Success
 # numResponses: 24
 # numEntries: 23
 ```
+
 </details><br>
 
 You can run the examples with the following command
+
 ```bash
-$ docker-compose -f examples/docker-compose-only.yml up
+docker-compose -f examples/docker-compose-only.yml up
 
 or
 
-$ docker-compose -f examples/docker-compose-dynamic-conf.yml up
+docker-compose -f examples/docker-compose-dynamic-conf.yml up
 ```
 
 After this, its possible to test using `curl`:
+
 ```bash
-curl --user tesla:password -H "Host: whoami.localhost" http://0.0.0.0
+curl --user tesla:password \
+  -H "Host: whoami.localhost" \
+  http://0.0.0.0
 ```
 
 You should see something like this:
+
 ```text
 Hostname: 507ac918ddd8
 IP: 127.0.0.1
@@ -331,11 +343,15 @@ X-Real-Ip: 172.20.0.1
 ```
 
 If a wrong password is provided:
+
 ```bash
-curl --user tesla:password-wrong -H "Host: whoami.localhost" http://0.0.0.0
+curl --user tesla:password-wrong \
+  -H "Host: whoami.localhost" \
+  http://0.0.0.0
 ```
 
 You should got the `LDAP` related error:
+
 ```text
 401 Unauthorized
 Error: [LDAP Result Code 49 "Invalid Credentials": ]
