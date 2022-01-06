@@ -1,0 +1,45 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    # build:
+    #   context: .
+    image: traefik:v2.5
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      # Load ldapAuth from local private plugins format ===============================#
+      # https://github.com/traefik/traefik/pull/8224                                   #
+      # "A plugin must be declared in the static configuration"                        #
+      # https://doc.traefik.io/traefik-pilot/plugins/overview/#installing-plugins      #
+      - "--experimental.localPlugins.ldapAuth.moduleName=github.com/wiltonsr/ldapAuth" #
+      # ===============================================================================#
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "../../ldapAuth:/plugins-local/src/github.com/wiltonsr/ldapAuth:ro"
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "whoami"
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      # Enable LDAP Auth Middleware defined in ldapAuth-conf.yml
+      - "traefik.http.routers.whoami.middlewares=my-ldapAuth"
+      # ldapAuth Register Middleware =======================================================
+      - "traefik.http.routers.whoami.middlewares=ldap_auth"                                #
+      # ldapAuth Options====================================================================
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"                  #
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                    #
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com"  #
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                      #
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com"      #
+      - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueID=uid"              #
+      # ====================================================================================
