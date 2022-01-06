@@ -43,7 +43,7 @@ func CreateConfig() *Config {
 		Url:                   "ldap://example.com", // Supports: ldap://, ldaps://
 		Port:                  389,                  // Usually 389 or 636
 		UserUniqueID:          "uid",                // Usually uid or sAMAccountname
-		BaseDN:                "dc=example,dc=org",
+		BaseDN:                "dc=example,dc=com",
 		BindDN:                "",
 		BindPassword:          "",
 		ForwardUsername:       true,
