@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/wiltonsr/ldapAuth/ldaputils"
@@ -25,10 +26,10 @@ type Config struct {
 	Debug                 bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
 	Url                   string `json:"url,omitempty" yaml:"url,omitempty"`
 	Port                  uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+	UserUniqueID          string `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
+	BaseDN                string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
 	BindDN                string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
 	BindPassword          string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	BaseDN                string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	UserUniqueID          string `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
 	ForwardUsername       bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
 	ForwardUsernameHeader string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 	ForwardAuthorization  bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
@@ -39,12 +40,12 @@ func CreateConfig() *Config {
 	return &Config{
 		Enabled:               true,
 		Debug:                 false,
-		Url:                   "ldap://example.com", // Supports: ldap://, ldaps://, ldapi://
-		Port:                  389,
-		BindDN:                "",
-		BindPassword:          "", // Usually 389 or 636
+		Url:                   "ldap://example.com", // Supports: ldap://, ldaps://
+		Port:                  389,                  // Usually 389 or 636
+		UserUniqueID:          "uid",                // Usually uid or sAMAccountname
 		BaseDN:                "dc=example,dc=org",
-		UserUniqueID:          "uid", // Usually uid or sAMAccountname
+		BindDN:                "",
+		BindPassword:          "",
 		ForwardUsername:       true,
 		ForwardUsernameHeader: "Username",
 	}
@@ -60,13 +61,8 @@ type LdapAuth struct {
 // New created a new LdapAuth plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	log.Println("Starting", name, "Middleware...")
-	if config.Debug {
-		log.Println("Enabled       =>", config.Enabled)
-		log.Println("Url          =>", config.Url)
-		log.Println("Port          =>", config.Port)
-		log.Println("BaseDN        =>", config.BaseDN)
-		log.Println("UserUniqueID  =>", config.UserUniqueID)
-	}
+
+	logConfig(config)
 
 	return &LdapAuth{
 		name:   name,
@@ -140,4 +136,22 @@ func (la *LdapAuth) RequireAuth(w http.ResponseWriter, req *http.Request, err ..
 	w.Header().Set("WWW-Authenticate", `Basic realm="`+defaultRealm+`"`)
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write([]byte(fmt.Sprintf("%d %s\nError: %s", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
+}
+
+func logConfig(config *Config) {
+	if config.Debug {
+		/*
+			Make this to prevent error msg
+			"Error in Go routine: reflect: call of reflect.Value.NumField on ptr Value"
+		*/
+		var c Config
+		c = *config
+
+		v := reflect.ValueOf(c)
+		typeOfS := v.Type()
+
+		for i := 0; i < v.NumField(); i++ {
+			log.Println(typeOfS.Field(i).Name, "=>", v.Field(i).Interface())
+		}
+	}
 }
