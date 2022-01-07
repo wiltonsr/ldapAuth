@@ -63,27 +63,27 @@ The unique identifier of users. This is used as a filter when performing bind in
 
 From where the plugin will search for users.
 
-##### `BindDN`
+##### `bindDN`
 *Optional, Default: `""`*
 
 The domain name to bind to in order to authenticate to the LDAP server when search for `User DN`. Leaving this empty means binds are anonymous, which is rarely expected behavior.
 
-##### `BindPassword`
+##### `bindPassword`
 *Optional, Default: `""`*
 
 The password corresponding to the `bindDN` specified, used in order to authenticate to the LDAP server.
 
-##### `ForwardUsername`
+##### `forwardUsername`
 *Optional, Default: `true`*
 
 The `forwardUsername` option can be enabled to forward the username in a specific header, defined using the `forwardUsernameHeader` option.
 
-##### `ForwardUsernameHeader`
+##### `forwardUsernameHeader`
 *Optional, Default: `Username`*
 
 Name of the header to put the username in when forwarding it. This is not used if the `forwardUsername` option is set to `false`.
 
-##### `ForwardAuthorization`
+##### `forwardAuthorization`
 *Optional, Default: `false`*
 
 The `forwardAuthorization` option determines if the authorization header will be forwarded or stripped from the request after it has been approved by the middleware. `Attention`, enabling this option may expose the password of the LDAP user who is making the request.
