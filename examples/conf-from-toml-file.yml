@@ -1,0 +1,40 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    # build:
+    #   context: .
+    image: traefik:v2.5.5
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      # Load ldapAuth from local private plugins format ===============================#
+      # https://github.com/traefik/traefik/pull/8224                                   #
+      # "A plugin must be declared in the static configuration"                        #
+      # https://doc.traefik.io/traefik-pilot/plugins/overview/#installing-plugins      #
+      - "--experimental.localPlugins.ldapAuth.moduleName=github.com/wiltonsr/ldapAuth" #
+      # ===============================================================================#
+      # Load ldapAuth Dynamic conf from file ==========================================#
+      # https://doc.traefik.io/traefik/providers/file/#filename                        #
+      - "--providers.file.filename=/dynamic-conf/ldapAuth-conf.toml"                   #
+      # ===============================================================================#
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "../../ldapAuth:/plugins-local/src/github.com/wiltonsr/ldapAuth:ro"
+      - "./dynamic-conf/ldapAuth-conf.toml:/dynamic-conf/ldapAuth-conf.toml:ro"
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "whoami"
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      # Enable LDAP Auth Middleware defined in ldapAuth-conf.yml
+      - "traefik.http.routers.whoami.middlewares=my-ldapAuth@file"

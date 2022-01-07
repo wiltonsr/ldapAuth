@@ -1,0 +1,8 @@
+[http.middlewares]
+  [http.middlewares.my-ldapAuth.plugin.ldapAuth]
+    Enabled = "true"
+    Debug = "true"
+    Url = "ldap://ldap.forumsys.com"
+    Port = "389"
+    BaseDN = "dc=example,dc=com"
+    UserUniqueId = "uid"

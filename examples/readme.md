@@ -306,11 +306,11 @@ result: 0 Success
 You can run the examples with the following command
 
 ```bash
-docker-compose -f examples/docker-compose-only.yml up
-
+docker-compose -f examples/conf-from-labels.yml up
 or
-
-docker-compose -f examples/docker-compose-dynamic-conf.yml up
+docker-compose -f examples/conf-from-toml-file.yml up
+or
+docker-compose -f examples/conf-from-yml-file.yml up
 ```
 
 After this, its possible to test using `curl`:
