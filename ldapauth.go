@@ -2,13 +2,16 @@
 package ldapAuth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/go-ldap/ldap/v3"
 )
@@ -21,33 +24,39 @@ const (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled               bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Debug                 bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
-	Url                   string `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                  uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	UserUniqueID          string `json:"userUniqueID,omitempty" yaml:"userUniqueID,omitempty"`
-	BaseDN                string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
-	BindPassword          string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername       bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization  bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	Enabled                 bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Debug                   bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
+	Url                     string `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                    uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+	Attribute               string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter            string `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                  string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                  string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
+	BindPassword            string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	ForwardUsername         bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader   string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization    bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	ForwardExtraLDAPHeaders bool   `json:"forwardExtraLDAPHeaders,omitempty" yaml:"forwardExtraLDAPHeaders,omitempty"`
+	Username                string
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		Enabled:               true,
-		Debug:                 false,
-		Url:                   "",    // Supports: ldap://, ldaps://
-		Port:                  389,   // Usually 389 or 636
-		UserUniqueID:          "uid", // Usually uid or sAMAccountname
-		BaseDN:                "",
-		BindDN:                "",
-		BindPassword:          "",
-		ForwardUsername:       true,
-		ForwardUsernameHeader: "Username",
-		ForwardAuthorization:  false,
+		Enabled:                 true,
+		Debug:                   false,
+		Url:                     "",   // Supports: ldap://, ldaps://
+		Port:                    389,  // Usually 389 or 636
+		Attribute:               "cn", // Usually uid or sAMAccountname
+		SearchFilter:            "",
+		BaseDN:                  "",
+		BindDN:                  "",
+		BindPassword:            "",
+		ForwardUsername:         true,
+		ForwardUsernameHeader:   "Username",
+		ForwardAuthorization:    false,
+		ForwardExtraLDAPHeaders: false,
+		Username:                "",
 	}
 }
 
@@ -62,7 +71,7 @@ type LdapAuth struct {
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	log.Printf("Starting %s Middleware...", name)
 
-	logConfig(config)
+	LogConfig(config)
 
 	return &LdapAuth{
 		name:   name,
@@ -79,7 +88,9 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	var err error
-	user, password, ok := req.BasicAuth()
+	username, password, ok := req.BasicAuth()
+
+	la.config.Username = username
 
 	if !ok {
 		err = errors.New("no valid 'Authentication: Basic xxxx' header found in request")
@@ -94,7 +105,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	isValidUser, err := ldapCheckUser(conn, la.config, user, password)
+	isValidUser, entry, err := LdapCheckUser(conn, la.config, username, password)
 
 	defer conn.Close()
 
@@ -107,10 +118,18 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		log.Printf("Authentication succeeded")
 	}
 
+	userDN := entry.DN
+	userCN := entry.GetAttributeValue("cn")
+
 	// Sanitize Some Headers Infos
 	if la.config.ForwardUsername {
-		req.URL.User = url.User(user)
-		req.Header[la.config.ForwardUsernameHeader] = []string{user}
+		req.URL.User = url.User(username)
+		req.Header[la.config.ForwardUsernameHeader] = []string{username}
+
+		if la.config.ForwardExtraLDAPHeaders {
+			req.Header["Ldap-Extra-Attr-DN"] = []string{userDN}
+			req.Header["Ldap-Extra-Attr-CN"] = []string{userCN}
+		}
 	}
 
 	/*
@@ -124,21 +143,30 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	la.next.ServeHTTP(rw, req)
 }
 
-func ldapCheckUser(conn *ldap.Conn, config *Config, user, password string) (bool, error) {
-	filter := fmt.Sprintf("(%s=%s)", config.UserUniqueID, user)
-	result, err := BindUserSearch(conn, filter, config)
+func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (bool, *ldap.Entry, error) {
+	if config.SearchFilter == "" {
+		log.Printf("Running in Bind Mode")
+		userDN := fmt.Sprintf("%s=%s,%s", config.Attribute, username, config.BaseDN)
+		log.Printf("Authenticating User: %s", userDN)
+		err := conn.Bind(userDN, password)
+		return err == nil, &ldap.Entry{}, err
+	} else {
+		log.Printf("Running in Search Mode")
 
-	// Return if search fails
-	if err != nil {
-		return false, err
+		result, err := SearchMode(conn, config, username)
+
+		// Return if search fails
+		if err != nil {
+			return false, &ldap.Entry{}, err
+		}
+
+		userDN := result.Entries[0].DN
+		log.Printf("Authenticating User: %s", userDN)
+
+		// Bind User and password
+		err = conn.Bind(userDN, password)
+		return err == nil, result.Entries[0], err
 	}
-
-	userDN := result.Entries[0].DN
-	log.Printf("Authenticating User: %s", userDN)
-
-	// Bind User and password
-	err = conn.Bind(userDN, password)
-	return err == nil, err
 }
 
 func RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
@@ -158,17 +186,24 @@ func Connect(url string, port uint16) (*ldap.Conn, error) {
 	return conn, nil
 }
 
-func BindUserSearch(conn *ldap.Conn, filter string, config *Config) (*ldap.SearchResult, error) {
+func SearchMode(conn *ldap.Conn, config *Config, username string) (*ldap.SearchResult, error) {
 	if config.BindDN != "" && config.BindPassword != "" {
 		log.Printf("Performing User BindDN Search")
 		err := conn.Bind(config.BindDN, config.BindPassword)
 
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("BindDN Error: %s", err))
+			return nil, fmt.Errorf("BindDN Error: %s", err)
 		}
 	} else {
 		log.Printf("Performing AnonymousBind Search")
 		conn.UnauthenticatedBind("")
+	}
+
+	parsedSearchFilter, err := ParseSearchFilter(config)
+	log.Printf("Search Filter: '%s'", parsedSearchFilter)
+
+	if err != nil {
+		return nil, err
 	}
 
 	search := ldap.NewSearchRequest(
@@ -178,8 +213,8 @@ func BindUserSearch(conn *ldap.Conn, filter string, config *Config) (*ldap.Searc
 		0,
 		0,
 		false,
-		filter,
-		[]string{"dn"},
+		parsedSearchFilter,
+		[]string{"dn", "cn"},
 		nil,
 	)
 
@@ -193,18 +228,41 @@ func BindUserSearch(conn *ldap.Conn, filter string, config *Config) (*ldap.Searc
 	if len(result.Entries) > 0 {
 		return result, nil
 	} else {
-		return nil, errors.New("Couldn't fetch bind search entries")
+		return nil, errors.New("couldn't fetch bind search entries")
 	}
 }
 
-func logConfig(config *Config) {
+func ParseSearchFilter(config *Config) (string, error) {
+	filter := config.SearchFilter
+
+	filter = strings.Trim(filter, "\n\t")
+	filter = strings.TrimSpace(filter)
+	filter = strings.ReplaceAll(filter, " ", "")
+
+	tmpl, err := template.New("search_template").Parse(filter)
+
+	if err != nil {
+		return "", err
+	}
+
+	var out bytes.Buffer
+
+	err = tmpl.Execute(&out, config)
+
+	if err != nil {
+		return "", err
+	}
+
+	return out.String(), nil
+}
+
+func LogConfig(config *Config) {
 	if config.Debug {
 		/*
 			Make this to prevent error msg
 			"Error in Go routine: reflect: call of reflect.Value.NumField on ptr Value"
 		*/
-		var c Config
-		c = *config
+		var c Config = *config
 
 		v := reflect.ValueOf(c)
 		typeOfS := v.Type()
