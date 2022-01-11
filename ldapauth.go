@@ -118,15 +118,14 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		log.Printf("Authentication succeeded")
 	}
 
-	userDN := entry.DN
-	userCN := entry.GetAttributeValue("cn")
-
 	// Sanitize Some Headers Infos
 	if la.config.ForwardUsername {
 		req.URL.User = url.User(username)
 		req.Header[la.config.ForwardUsernameHeader] = []string{username}
 
-		if la.config.ForwardExtraLDAPHeaders {
+		if la.config.ForwardExtraLDAPHeaders && la.config.SearchFilter != "" {
+			userDN := entry.DN
+			userCN := entry.GetAttributeValue("cn")
 			req.Header["Ldap-Extra-Attr-DN"] = []string{userDN}
 			req.Header["Ldap-Extra-Attr-CN"] = []string{userCN}
 		}
