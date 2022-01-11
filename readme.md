@@ -82,7 +82,7 @@ labels:
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindDN=uid=tesla,dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindPassword=password
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=(&(ou=chemists)(uniqueMember={{.Attribute}}={{.Username}}))
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=(&(objectClass=person)({{.Attribute}}={{.Username}}))
 ```
 
 ## Operations Mode
