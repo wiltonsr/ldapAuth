@@ -7,7 +7,7 @@ summary: "An open source Traefik Middleware that enables Authentication via LDAP
 
 testData:
   Enabled: true
-  Debug: false
+  LogLevel: "DEBUG"
   Host: "ldap://example.com"
   Port: 389
   BaseDn: "dc=example,dc=org"
