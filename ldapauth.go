@@ -162,7 +162,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	} else {
 		LoggerDEBUG.Printf("Running in Search Mode")
 
-		result, err := SearchMode(conn, config, username)
+		result, err := SearchMode(conn, config)
 
 		// Return if search fails
 		if err != nil {
@@ -195,7 +195,7 @@ func Connect(url string, port uint16) (*ldap.Conn, error) {
 	return conn, nil
 }
 
-func SearchMode(conn *ldap.Conn, config *Config, username string) (*ldap.SearchResult, error) {
+func SearchMode(conn *ldap.Conn, config *Config) (*ldap.SearchResult, error) {
 	if config.BindDN != "" && config.BindPassword != "" {
 		LoggerDEBUG.Printf("Performing User BindDN Search")
 		err := conn.Bind(config.BindDN, config.BindPassword)
