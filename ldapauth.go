@@ -220,14 +220,16 @@ func SearchMode(conn *ldap.Conn, config *Config, username string) (*ldap.SearchR
 	result, err := conn.Search(search)
 
 	if err != nil {
-		log.Printf("Bind Search Error")
+		log.Printf("Search Filter Error")
 		return nil, err
 	}
 
-	if len(result.Entries) > 0 {
+	if len(result.Entries) == 1 {
 		return result, nil
+	} else if len(result.Entries) < 1 {
+		return nil, errors.New("Search Filter return empty result")
 	} else {
-		return nil, errors.New("couldn't fetch bind search entries")
+		return nil, errors.New(fmt.Sprintf("Search Filter return multiple entries (%d)", len(result.Entries)))
 	}
 }
 

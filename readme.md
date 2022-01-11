@@ -93,7 +93,7 @@ If no `searchFilter` is specified in its configuration, the middleware runs in t
 
 ### Search Mode
 
-If a `searchFilter` query is specified in the configuration, then the middleware runs in search mode. In this mode, a search query with the given filter is issued to the LDAP server before trying to bind. If `bindDN` and `bindPassword` have also been provided, then the search query will use this crentials . If result of this search returns only `1` record, it tries to issue a bind request with this record, otherwise it aborts a 401 Unauthorized status code.
+If a `searchFilter` query is specified in the configuration, then the middleware runs in search mode. In this mode, a search query with the given filter is issued to the LDAP server before trying to bind. If `bindDN` and `bindPassword` have also been provided, then the search query will use this crentials. If result of this search returns only `1` record, it tries to issue a bind request with this record, otherwise it aborts a 401 Unauthorized status code.
 
 ## Options
 
