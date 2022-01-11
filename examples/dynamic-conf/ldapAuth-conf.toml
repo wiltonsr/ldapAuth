@@ -1,7 +1,7 @@
 [http.middlewares]
   [http.middlewares.my-ldapAuth.plugin.ldapAuth]
     Enabled = "true"
-    Debug = "true"
+    LogLevel = "DEBUG"
     Url = "ldap://ldap.forumsys.com"
     Port = "389"
     BaseDN = "dc=example,dc=com"

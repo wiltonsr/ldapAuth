@@ -26,7 +26,7 @@ whoami:
     - traefik.http.routers.whoami.middlewares=ldap_auth                               #
     # ldapAuth Options=================================================================
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true                 #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true                   #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG               #
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com #
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389                     #
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com     #
@@ -102,10 +102,10 @@ If a `searchFilter` query is specified in the configuration, then the middleware
 
 Controls whether requests will be checked against LDAP or not before being delivered.
 
-##### `debug`
-*Optional, Default: `false`*
+##### `logLevel`
+*Optional, Default: `INFO`*
 
-Enable debug mode to logs for detailed information about plugin operation.
+Set `LogLevel` for detailed information about plugin operation.
 
 ##### `url`
 *Required, Default: `""`*

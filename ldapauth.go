@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 
@@ -22,10 +24,16 @@ const (
 	contentType         = "Content-Type"
 )
 
+var (
+	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
+	LoggerINFO  = log.New(ioutil.Discard, "INFO: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
+	LoggerERROR = log.New(ioutil.Discard, "ERROR: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
+)
+
 // Config the plugin configuration.
 type Config struct {
 	Enabled                 bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Debug                   bool   `json:"debug,omitempty" yaml:"debug,omitempty"`
+	LogLevel                string `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
 	Url                     string `json:"url,omitempty" yaml:"url,omitempty"`
 	Port                    uint16 `json:"port,omitempty" yaml:"port,omitempty"`
 	Attribute               string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
@@ -44,7 +52,7 @@ type Config struct {
 func CreateConfig() *Config {
 	return &Config{
 		Enabled:                 true,
-		Debug:                   false,
+		LogLevel:                "INFO",
 		Url:                     "",   // Supports: ldap://, ldaps://
 		Port:                    389,  // Usually 389 or 636
 		Attribute:               "cn", // Usually uid or sAMAccountname
@@ -69,9 +77,11 @@ type LdapAuth struct {
 
 // New created a new LdapAuth plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	log.Printf("Starting %s Middleware...", name)
+	SetLogger(config.LogLevel)
 
-	LogConfig(config)
+	LoggerINFO.Printf("Starting %s Middleware...", name)
+
+	LogConfigParams(config)
 
 	return &LdapAuth{
 		name:   name,
@@ -82,7 +92,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if !la.config.Enabled {
-		log.Printf("%s Disabled! Passing request...", la.name)
+		LoggerINFO.Printf("%s Disabled! Passing request...", la.name)
 		la.next.ServeHTTP(rw, req)
 		return
 	}
@@ -100,7 +110,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	conn, err := Connect(la.config.Url, la.config.Port)
 	if err != nil {
-		log.Printf(fmt.Sprintf("%s\n", err))
+		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, err)
 		return
 	}
@@ -110,12 +120,12 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	defer conn.Close()
 
 	if !isValidUser {
-		log.Printf(fmt.Sprintf("%s\n", err))
-		log.Printf("Authentication failed")
+		LoggerERROR.Printf("%s", err)
+		LoggerERROR.Printf("Authentication failed")
 		RequireAuth(rw, req, err)
 		return
 	} else {
-		log.Printf("Authentication succeeded")
+		LoggerINFO.Printf("Authentication succeeded")
 	}
 
 	// Sanitize Some Headers Infos
@@ -144,13 +154,13 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (bool, *ldap.Entry, error) {
 	if config.SearchFilter == "" {
-		log.Printf("Running in Bind Mode")
+		LoggerDEBUG.Printf("Running in Bind Mode")
 		userDN := fmt.Sprintf("%s=%s,%s", config.Attribute, username, config.BaseDN)
-		log.Printf("Authenticating User: %s", userDN)
+		LoggerDEBUG.Printf("Authenticating User: %s", userDN)
 		err := conn.Bind(userDN, password)
 		return err == nil, &ldap.Entry{}, err
 	} else {
-		log.Printf("Running in Search Mode")
+		LoggerDEBUG.Printf("Running in Search Mode")
 
 		result, err := SearchMode(conn, config, username)
 
@@ -160,7 +170,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 		}
 
 		userDN := result.Entries[0].DN
-		log.Printf("Authenticating User: %s", userDN)
+		LoggerINFO.Printf("Authenticating User: %s", userDN)
 
 		// Bind User and password
 		err = conn.Bind(userDN, password)
@@ -187,19 +197,19 @@ func Connect(url string, port uint16) (*ldap.Conn, error) {
 
 func SearchMode(conn *ldap.Conn, config *Config, username string) (*ldap.SearchResult, error) {
 	if config.BindDN != "" && config.BindPassword != "" {
-		log.Printf("Performing User BindDN Search")
+		LoggerDEBUG.Printf("Performing User BindDN Search")
 		err := conn.Bind(config.BindDN, config.BindPassword)
 
 		if err != nil {
 			return nil, fmt.Errorf("BindDN Error: %s", err)
 		}
 	} else {
-		log.Printf("Performing AnonymousBind Search")
+		LoggerDEBUG.Printf("Performing AnonymousBind Search")
 		conn.UnauthenticatedBind("")
 	}
 
 	parsedSearchFilter, err := ParseSearchFilter(config)
-	log.Printf("Search Filter: '%s'", parsedSearchFilter)
+	LoggerDEBUG.Printf("Search Filter: '%s'", parsedSearchFilter)
 
 	if err != nil {
 		return nil, err
@@ -220,16 +230,16 @@ func SearchMode(conn *ldap.Conn, config *Config, username string) (*ldap.SearchR
 	result, err := conn.Search(search)
 
 	if err != nil {
-		log.Printf("Search Filter Error")
+		LoggerERROR.Printf("Search Filter Error")
 		return nil, err
 	}
 
 	if len(result.Entries) == 1 {
 		return result, nil
 	} else if len(result.Entries) < 1 {
-		return nil, errors.New("Search Filter return empty result")
+		return nil, fmt.Errorf("search silter return empty result")
 	} else {
-		return nil, errors.New(fmt.Sprintf("Search Filter return multiple entries (%d)", len(result.Entries)))
+		return nil, fmt.Errorf(fmt.Sprintf("search filter return multiple entries (%d)", len(result.Entries)))
 	}
 }
 
@@ -257,19 +267,34 @@ func ParseSearchFilter(config *Config) (string, error) {
 	return out.String(), nil
 }
 
-func LogConfig(config *Config) {
-	if config.Debug {
-		/*
-			Make this to prevent error msg
-			"Error in Go routine: reflect: call of reflect.Value.NumField on ptr Value"
-		*/
-		var c Config = *config
+func SetLogger(level string) {
+	switch level {
+	case "ERROR":
+		LoggerERROR.SetOutput(os.Stdout)
+	case "INFO":
+		LoggerERROR.SetOutput(os.Stdout)
+		LoggerINFO.SetOutput(os.Stdout)
+	case "DEBUG":
+		LoggerERROR.SetOutput(os.Stdout)
+		LoggerINFO.SetOutput(os.Stdout)
+		LoggerDEBUG.SetOutput(os.Stdout)
+	default:
+		LoggerERROR.SetOutput(os.Stdout)
+		LoggerINFO.SetOutput(os.Stdout)
+	}
+}
 
-		v := reflect.ValueOf(c)
-		typeOfS := v.Type()
+func LogConfigParams(config *Config) {
+	/*
+		Make this to prevent error msg
+		"Error in Go routine: reflect: call of reflect.Value.NumField on ptr Value"
+	*/
+	var c Config = *config
 
-		for i := 0; i < v.NumField(); i++ {
-			log.Println(typeOfS.Field(i).Name, "=>", v.Field(i).Interface())
-		}
+	v := reflect.ValueOf(c)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		LoggerDEBUG.Printf(fmt.Sprint(typeOfS.Field(i).Name, " => '", v.Field(i).Interface(), "'"))
 	}
 }
