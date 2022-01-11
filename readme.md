@@ -12,25 +12,88 @@ This project is an in progress effort to create an open source middleware that e
 
 ## Usage
 
+### Add Plugin to Service
+
 ```yml
 whoami:
   image: "traefik/whoami"
-  container_name: "simple-service"
+  container_name: "whoami"
   labels:
-    - "traefik.enable=true"
-    - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
-    - "traefik.http.routers.whoami.entrypoints=web"
-    # ldapAuth Register Middleware =======================================================
-    - "traefik.http.routers.whoami.middlewares=ldap_auth"                                #
-    # ldapAuth Options====================================================================
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true"                  #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true"                    #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com"  #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389"                      #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com"      #
-    - "traefik.http.middlewares.ldap_auth.plugin.ldapAuth.userUniqueID=uid"              #
-    # ====================================================================================
+    - traefik.enable=true
+    - traefik.http.routers.whoami.rule=Host(`whoami.localhost`)
+    - traefik.http.routers.whoami.entrypoints=web
+    # ldapAuth Register Middleware ====================================================
+    - traefik.http.routers.whoami.middlewares=ldap_auth                               #
+    # ldapAuth Options=================================================================
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true                 #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true                   #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389                     #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com     #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid                #
+    # =================================================================================
 ```
+
+### Bind Mode Example
+
+```yml
+[...]
+labels:
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+```
+
+### Search Mode Anonymous Example
+
+```yml
+[...]
+labels:
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
+```
+
+### Search Mode Authenticated Example
+
+```yml
+[...]
+labels:
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindDN=uid=tesla,dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindPassword=password
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
+```
+
+### Advanced Search Mode Example
+
+```yml
+[...]
+labels:
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindDN=uid=tesla,dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindPassword=password
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=(&(objectClass=person)({{.Attribute}}={{.Username}}))
+```
+
+## Operations Mode
+
+### Bind Mode
+
+If no `searchFilter` is specified in its configuration, the middleware runs in the default bind mode, meaning it tries to make a simple bind request to the LDAP server with the credentials provided in the request headers. If the bind succeeds, the middleware forwards the request, otherwise it returns a 401 Unauthorized status code.
+
+### Search Mode
+
+If a `searchFilter` query is specified in the configuration, then the middleware runs in search mode. In this mode, a search query with the given filter is issued to the LDAP server before trying to bind. If `bindDN` and `bindPassword` have also been provided, then the search query will use this crentials. If result of this search returns only `1` record, it tries to issue a bind request with this record, otherwise it aborts a 401 Unauthorized status code.
 
 ## Options
 
@@ -54,10 +117,23 @@ LDAP server address where queries will be performed.
 
 LDAP server port where queries will be performed.
 
-##### `userUniqueId`
-*Optional, Default: `uid`*
+##### `attribute`
+*Optional, Default: `cn`*
 
-The unique identifier of users. This is used as a filter when performing bind in order to filter the user making the request.
+The attribute used to bind a user in [`Bind Mode`](#bind-mode). Bind queries use this pattern: `<attribute>=<username>,<baseDN>`, where the username is extracted from the request header.
+
+##### `searchFilter`
+*Optional, Default: `""`*
+
+If not empty, the middleware will run in [`Search Mode`](#search-mode), filtering search results with the given query.
+
+Filter queries can use the `{{.Option}}` format, from [text/template](https://pkg.go.dev/text/template#pkg-overview) go package, as placeholders that are replaced by the equivalent value from config. Additionaly, the username provided in the Authorization header of the request can also be used.
+
+For example: `(&(objectClass=inetOrgPerson)(gidNumber=500)({{.Attribute}}={{.Username}}))`.
+
+Will be replaced to: `(&(objectClass=inetOrgPerson)(gidNumber=500)(uid=tesla))`.
+
+Note: All filters options must be start with Uppercase to be replaced correctly.
 
 ##### `baseDN`
 *Required, Default: `""`*
@@ -67,12 +143,12 @@ From where the plugin will search for users.
 ##### `bindDN`
 *Optional, Default: `""`*
 
-The domain name to bind to in order to authenticate to the LDAP server when search for `User DN`. Leaving this empty means binds are anonymous, which is rarely expected behavior.
+The domain name to bind to in order to authenticate to the LDAP server when running on [`Search Mode`](#search-mode). Leaving this empty with [`Search Mode`](#search-mode) means binds are anonymous, which is rarely expected behavior. It is not used when running in [`Bind Mode`](#bind-mode).
 
 ##### `bindPassword`
 *Optional, Default: `""`*
 
-The password corresponding to the `bindDN` specified, used in order to authenticate to the LDAP server.
+The password corresponding to the `bindDN` specified when running in [`Search Mode`](#search-mode), used in order to authenticate to the LDAP server.
 
 ##### `forwardUsername`
 *Optional, Default: `true`*
@@ -88,3 +164,9 @@ Name of the header to put the username in when forwarding it. This is not used i
 *Optional, Default: `false`*
 
 The `forwardAuthorization` option determines if the authorization header will be forwarded or stripped from the request after it has been approved by the middleware. `Attention`, enabling this option may expose the password of the LDAP user who is making the request.
+
+##### `forwardExtraLDAPHeaders`
+*Optional, Default: `false`*
+
+The `forwardExtraLDAPHeaders` option determines if the LDAP Extra Headers, `Ldap-Extra-Attr-DN` and
+`Ldap-Extra-Attr-CN`, will be added or not to request. This is not used if the `forwardUsername` option is set to `false` or if `searchFilter` is empty.

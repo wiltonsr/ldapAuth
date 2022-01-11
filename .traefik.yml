@@ -11,4 +11,4 @@ testData:
   Host: "ldap://example.com"
   Port: 389
   BaseDn: "dc=example,dc=org"
-  UserUniqueId: "uid"
+  Attribute: "uid"

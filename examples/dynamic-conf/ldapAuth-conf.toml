@@ -5,4 +5,4 @@
     Url = "ldap://ldap.forumsys.com"
     Port = "389"
     BaseDN = "dc=example,dc=com"
-    UserUniqueId = "uid"
+    Attribute = "uid"
