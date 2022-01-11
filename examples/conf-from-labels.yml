@@ -34,7 +34,7 @@ services:
       # ldapAuth Register Middleware ======================================================
       - traefik.http.routers.whoami.middlewares=ldap_auth                                 #
       # ldapAuth Options===================================================================
-      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true                   #
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG                 #
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.debug=true                     #
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com   #
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389                       #
