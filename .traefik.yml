@@ -5,6 +5,10 @@ import: github.com/wiltonsr/ldapAuth
 
 summary: "An open source Traefik Middleware that enables Authentication via LDAP in a similar way to Traefik Enterprise"
 
+iconPath: imgs/gandalpher.png
+
+bannerPath: imgs/gandalpher.png
+
 testData:
   Enabled: true
   LogLevel: "DEBUG"

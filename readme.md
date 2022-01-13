@@ -1,3 +1,15 @@
+<p align="center">
+<img src="imgs/gandalpher.png" alt="Gandalpher" title="Gandalpher" />
+</p>
+
+<p align="center">
+  <cite>
+    "You shall authenticate to the LDAP to pass" - Gandalpher, the gopher
+  </cite>
+</p>
+
+---
+
 # Traefik ldapAuth Middleware
 
 This project is an in progress effort to create an open source middleware that enables authentication via LDAP in a similar way to [Traefik Enterprise](https://doc.traefik.io/traefik-enterprise/middlewares/ldap/).
