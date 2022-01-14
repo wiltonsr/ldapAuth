@@ -18,12 +18,6 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
-const (
-	defaultRealm        = "traefik"
-	authorizationHeader = "Authorization"
-	contentType         = "Content-Type"
-)
-
 var (
 	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	LoggerINFO  = log.New(ioutil.Discard, "INFO: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -32,39 +26,43 @@ var (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled                 bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	LogLevel                string `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
-	Url                     string `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                    uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	Attribute               string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
-	SearchFilter            string `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
-	BaseDN                  string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                  string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
-	BindPassword            string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername         bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader   string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization    bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
-	ForwardExtraLDAPHeaders bool   `json:"forwardExtraLDAPHeaders,omitempty" yaml:"forwardExtraLDAPHeaders,omitempty"`
-	Username                string
+	Enabled                    bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	LogLevel                   string `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
+	Url                        string `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                       uint16 `json:"port,omitempty" yaml:"port,omitempty"`
+	Attribute                  string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter               string `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                     string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                     string `json:"bindDN,omitempty" yaml:"bindDN,omitempty"`
+	BindPassword               string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	ForwardUsername            bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader      string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization       bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	ForwardExtraLDAPHeaders    bool   `json:"forwardExtraLDAPHeaders,omitempty" yaml:"forwardExtraLDAPHeaders,omitempty"`
+	WWWAuthenticateHeader      bool   `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
+	WWWAuthenticateHeaderRealm string `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	Username                   string
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		Enabled:                 true,
-		LogLevel:                "INFO",
-		Url:                     "",   // Supports: ldap://, ldaps://
-		Port:                    389,  // Usually 389 or 636
-		Attribute:               "cn", // Usually uid or sAMAccountname
-		SearchFilter:            "",
-		BaseDN:                  "",
-		BindDN:                  "",
-		BindPassword:            "",
-		ForwardUsername:         true,
-		ForwardUsernameHeader:   "Username",
-		ForwardAuthorization:    false,
-		ForwardExtraLDAPHeaders: false,
-		Username:                "",
+		Enabled:                    true,
+		LogLevel:                   "INFO",
+		Url:                        "",   // Supports: ldap://, ldaps://
+		Port:                       389,  // Usually 389 or 636
+		Attribute:                  "cn", // Usually uid or sAMAccountname
+		SearchFilter:               "",
+		BaseDN:                     "",
+		BindDN:                     "",
+		BindPassword:               "",
+		ForwardUsername:            true,
+		ForwardUsernameHeader:      "Username",
+		ForwardAuthorization:       false,
+		ForwardExtraLDAPHeaders:    false,
+		WWWAuthenticateHeader:      false,
+		WWWAuthenticateHeaderRealm: "",
+		Username:                   "",
 	}
 }
 
@@ -104,14 +102,14 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		err = errors.New("no valid 'Authentication: Basic xxxx' header found in request")
-		RequireAuth(rw, req, err)
+		RequireAuth(rw, req, la.config, err)
 		return
 	}
 
 	conn, err := Connect(la.config.Url, la.config.Port)
 	if err != nil {
 		LoggerERROR.Printf("%s", err)
-		RequireAuth(rw, req, err)
+		RequireAuth(rw, req, la.config, err)
 		return
 	}
 
@@ -122,7 +120,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if !isValidUser {
 		LoggerERROR.Printf("%s", err)
 		LoggerERROR.Printf("Authentication failed")
-		RequireAuth(rw, req, err)
+		RequireAuth(rw, req, la.config, err)
 		return
 	} else {
 		LoggerINFO.Printf("Authentication succeeded")
@@ -178,9 +176,15 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	}
 }
 
-func RequireAuth(w http.ResponseWriter, req *http.Request, err ...error) {
-	w.Header().Set(contentType, "text/plan")
-	w.Header().Set("WWW-Authenticate", `Basic realm="`+defaultRealm+`"`)
+func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err ...error) {
+	w.Header().Set("Content-Type", "text/plan")
+	if config.WWWAuthenticateHeader {
+		var wwwHeaderContent = "Basic"
+		if config.WWWAuthenticateHeaderRealm != "" {
+			wwwHeaderContent = fmt.Sprintf("Basic realm=\"%s\"", config.WWWAuthenticateHeaderRealm)
+		}
+		w.Header().Set("WWW-Authenticate", wwwHeaderContent)
+	}
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write([]byte(fmt.Sprintf("%d %s\nError: %s\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
 }

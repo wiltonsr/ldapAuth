@@ -182,3 +182,13 @@ The `forwardAuthorization` option determines if the authorization header will be
 
 The `forwardExtraLDAPHeaders` option determines if the LDAP Extra Headers, `Ldap-Extra-Attr-DN` and
 `Ldap-Extra-Attr-CN`, will be added or not to request. This is not used if the `forwardUsername` option is set to `false` or if `searchFilter` is empty.
+
+##### `wwwAuthenticateHeader`
+*Optional, Default: `false`*
+
+If the LDAP middleware receives a request with a missing or invalid Authorization header and `wwwAuthenticateHeader` is enabled, it will set a `WWW-Authenticate` header in the 401 Unauthorized response. See the [WWW-Authenticate header documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate) for more information.
+
+##### `wwwAuthenticateHeaderRealm`
+*Optional, Default: `""`*
+
+The name of the realm to specify in the `WWW-Authenticate` header. This option is ineffective unless the `wwwAuthenticateHeader` option is set to true.
