@@ -65,7 +65,7 @@ func CreateConfig() *Config {
 		ForwardUsernameHeader:      "Username",
 		ForwardAuthorization:       false,
 		ForwardExtraLdapHeaders:    false,
-		WWWAuthenticateHeader:      false,
+		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
 		Username:                   "",
 	}
