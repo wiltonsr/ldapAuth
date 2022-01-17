@@ -281,16 +281,16 @@ func ParseSearchFilter(config *Config) (string, error) {
 func SetLogger(level string) {
 	switch level {
 	case "ERROR":
-		LoggerERROR.SetOutput(os.Stdout)
+		LoggerERROR.SetOutput(os.Stderr)
 	case "INFO":
-		LoggerERROR.SetOutput(os.Stdout)
+		LoggerERROR.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 	case "DEBUG":
-		LoggerERROR.SetOutput(os.Stdout)
+		LoggerERROR.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 		LoggerDEBUG.SetOutput(os.Stdout)
 	default:
-		LoggerERROR.SetOutput(os.Stdout)
+		LoggerERROR.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 	}
 }
