@@ -1,8 +1,11 @@
 [http.middlewares]
-  [http.middlewares.my-ldapAuth.plugin.ldapAuth]
-    Enabled = "true"
-    LogLevel = "DEBUG"
-    Url = "ldap://ldap.forumsys.com"
-    Port = "389"
-    BaseDN = "dc=example,dc=com"
-    Attribute = "uid"
+[http.middlewares.my-ldapAuth.plugin.ldapAuth]
+Attribute = "uid"
+BaseDN = "dc=example,dc=com"
+Enabled = "true"
+LogLevel = "DEBUG"
+Port = "389"
+Url = "ldap://ldap.forumsys.com"
+# SearchFilter must escape curly braces when using toml file
+# https://toml.io/en/v1.0.0#string
+# SearchFilter = '''(\{\{.Attribute\}\}=\{\{.Username\}\})'''
