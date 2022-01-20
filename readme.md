@@ -1,14 +1,18 @@
 <p align="center">
 <img src="imgs/gandalpher.png" alt="Gandalpher" title="Gandalpher" />
-</p>
-
-<p align="center">
-  <cite>
-    "You shall authenticate to the LDAP to pass" - Gandalpher, the gopher
-  </cite>
+<br>
+<em><b>"You shall authenticate to the LDAP to pass"</b> - Gandalpher, the gopher</em>
 </p>
 
 ---
+
+<h1 align="center">
+<img alt="GitHub" src="https://img.shields.io/github/license/wiltonsr/ldapAuth?color=blue">
+<img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/wiltonsr/ldapAuth?include_prereleases">
+<img alt="GitHub go.mod Go version" src="https://img.shields.io/github/go-mod/go-version/wiltonsr/ldapAuth">
+<img alt="GitHub issues" src="https://img.shields.io/github/issues/wiltonsr/ldapAuth">
+<img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/wiltonsr/ldapAuth/master">
+</h1>
 
 # Traefik ldapAuth Middleware
 
@@ -35,14 +39,14 @@ whoami:
     - traefik.http.routers.whoami.rule=Host(`whoami.localhost`)
     - traefik.http.routers.whoami.entrypoints=web
     # ldapAuth Register Middleware ====================================================
-    - traefik.http.routers.whoami.middlewares=ldap_auth                               #
+    - traefik.http.routers.whoami.middlewares=ldap_auth
     # ldapAuth Options=================================================================
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true                 #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG               #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389                     #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com     #
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid                #
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
     # =================================================================================
 ```
 
@@ -110,32 +114,38 @@ If a `searchFilter` query is specified in the configuration, then the middleware
 ## Options
 
 ##### `enabled`
-*Optional, Default: `true`*
+
+_Optional, Default: `true`_
 
 Controls whether requests will be checked against LDAP or not before being delivered.
 
 ##### `logLevel`
-*Optional, Default: `INFO`*
+
+_Optional, Default: `INFO`_
 
 Set `LogLevel` for detailed information about plugin operation.
 
 ##### `url`
-*Required, Default: `""`*
+
+_Required, Default: `""`_
 
 LDAP server address where queries will be performed.
 
 ##### `port`
-*Optional, Default: `389`*
+
+_Optional, Default: `389`_
 
 LDAP server port where queries will be performed.
 
 ##### `attribute`
-*Optional, Default: `cn`*
+
+_Optional, Default: `cn`_
 
 The attribute used to bind a user in [`Bind Mode`](#bind-mode). Bind queries use this pattern: `<attribute>=<username>,<baseDN>`, where the username is extracted from the request header.
 
 ##### `searchFilter`
-*Optional, Default: `""`*
+
+_Optional, Default: `""`_
 
 If not empty, the middleware will run in [`Search Mode`](#search-mode), filtering search results with the given query.
 
@@ -154,47 +164,56 @@ Note3: `searchFilter` must escape curly braces when using [yml file](examples/dy
 Note4: `searchFilter` must escape curly braces when using [toml file](examples/dynamic-conf/ldapAuth-conf.toml).
 
 ##### `baseDN`
-*Required, Default: `""`*
+
+_Required, Default: `""`_
 
 From where the plugin will search for users.
 
 ##### `bindDN`
-*Optional, Default: `""`*
+
+_Optional, Default: `""`_
 
 The domain name to bind to in order to authenticate to the LDAP server when running on [`Search Mode`](#search-mode). Leaving this empty with [`Search Mode`](#search-mode) means binds are anonymous, which is rarely expected behavior. It is not used when running in [`Bind Mode`](#bind-mode).
 
 ##### `bindPassword`
-*Optional, Default: `""`*
+
+_Optional, Default: `""`_
 
 The password corresponding to the `bindDN` specified when running in [`Search Mode`](#search-mode), used in order to authenticate to the LDAP server.
 
 ##### `forwardUsername`
-*Optional, Default: `true`*
+
+_Optional, Default: `true`_
 
 The `forwardUsername` option can be enabled to forward the username in a specific header, defined using the `forwardUsernameHeader` option.
 
 ##### `forwardUsernameHeader`
-*Optional, Default: `Username`*
+
+_Optional, Default: `Username`_
 
 Name of the header to put the username in when forwarding it. This is not used if the `forwardUsername` option is set to `false`.
 
 ##### `forwardAuthorization`
-*Optional, Default: `false`*
+
+_Optional, Default: `false`_
 
 The `forwardAuthorization` option determines if the authorization header will be forwarded or stripped from the request after it has been approved by the middleware. `Attention`, enabling this option may expose the password of the LDAP user who is making the request.
 
 ##### `forwardExtraLDAPHeaders`
-*Optional, Default: `false`*
+
+_Optional, Default: `false`_
 
 The `forwardExtraLDAPHeaders` option determines if the LDAP Extra Headers, `Ldap-Extra-Attr-DN` and
 `Ldap-Extra-Attr-CN`, will be added or not to request. This is not used if the `forwardUsername` option is set to `false` or if `searchFilter` is empty.
 
 ##### `wwwAuthenticateHeader`
-*Optional, Default: `true`*
+
+_Optional, Default: `true`_
 
 If the LDAP middleware receives a request with a missing or invalid Authorization header and `wwwAuthenticateHeader` is enabled, it will set a `WWW-Authenticate` header in the 401 Unauthorized response. See the [WWW-Authenticate header documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate) for more information.
 
 ##### `wwwAuthenticateHeaderRealm`
-*Optional, Default: `""`*
+
+_Optional, Default: `""`_
 
 The name of the realm to specify in the `WWW-Authenticate` header. This option is ineffective unless the `wwwAuthenticateHeader` option is set to true.
