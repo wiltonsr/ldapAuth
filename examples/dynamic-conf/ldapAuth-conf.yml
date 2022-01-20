@@ -9,3 +9,6 @@ http:
           Port: 389
           BaseDN: "dc=example,dc=com"
           Attribute: "uid"
+          # SearchFilter must escape curly braces when using yml file
+          # https://yaml.org/spec/1.1/#id872840
+          # SearchFilter: (\{\{.Attribute\}\}=\{\{.Username\}\})

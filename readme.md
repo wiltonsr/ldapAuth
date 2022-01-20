@@ -145,7 +145,11 @@ For example: `(&(objectClass=inetOrgPerson)(gidNumber=500)({{.Attribute}}={{.Use
 
 Will be replaced to: `(&(objectClass=inetOrgPerson)(gidNumber=500)(uid=tesla))`.
 
-Note: All filters options must be start with Uppercase to be replaced correctly.
+Note1: All filters options must be start with Uppercase to be replaced correctly.
+
+Note2: `searchFilter` must escape curly braces when using [yml file](examples/dynamic-conf/ldapAuth-conf.yml).
+
+Note3: `searchFilter` must escape curly braces when using [toml file](examples/dynamic-conf/ldapAuth-conf.toml).
 
 ##### `baseDN`
 *Required, Default: `""`*
