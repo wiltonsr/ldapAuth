@@ -31,21 +31,22 @@ var (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled                    bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	LogLevel                   string `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
-	URL                        string `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                       uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	Attribute                  string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
-	SearchFilter               string `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
-	BaseDN                     string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                     string `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
-	BindPassword               string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername            bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader      string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization       bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
-	ForwardExtraLdapHeaders    bool   `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
-	WWWAuthenticateHeader      bool   `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
-	WWWAuthenticateHeaderRealm string `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	Enabled                    bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
+	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                     string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
+	BindPassword               string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	ForwardUsername            bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader      string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization       bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
+	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
+	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 	Username                   string
 }
 
@@ -67,6 +68,7 @@ func CreateConfig() *Config {
 		ForwardExtraLdapHeaders:    false,
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
+		AllowedGroups:              nil,
 		Username:                   "",
 	}
 }
