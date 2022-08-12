@@ -5,7 +5,7 @@ services:
   traefik:
     # build:
     #   context: .
-    image: traefik:v2.5.5
+    image: traefik:v2.8.2
     container_name: "traefik"
     command:
       #- "--log.level=DEBUG"

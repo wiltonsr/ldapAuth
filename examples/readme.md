@@ -356,3 +356,18 @@ You should got the `LDAP` related error:
 401 Unauthorized
 Error: [LDAP Result Code 49 "Invalid Credentials": ]
 ```
+
+If the user doesn't belong to any of `AllowedGroups`:
+
+```bash
+curl --user einstein:password \
+  -H "Host: whoami.localhost" \
+  http://0.0.0.0
+```
+
+You should got the `LDAP` related error:
+
+```text
+401 Unauthorized
+Error: [User not in any of the allowed groups]
+```
