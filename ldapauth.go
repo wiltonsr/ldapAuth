@@ -31,21 +31,22 @@ var (
 
 // Config the plugin configuration.
 type Config struct {
-	Enabled                    bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	LogLevel                   string `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
-	URL                        string `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                       uint16 `json:"port,omitempty" yaml:"port,omitempty"`
-	Attribute                  string `json:"attribute,omitempty" yaml:"attribute,omitempty"`
-	SearchFilter               string `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
-	BaseDN                     string `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                     string `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
-	BindPassword               string `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername            bool   `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader      string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization       bool   `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
-	ForwardExtraLdapHeaders    bool   `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
-	WWWAuthenticateHeader      bool   `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
-	WWWAuthenticateHeaderRealm string `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	Enabled                    bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
+	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                     string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
+	BindPassword               string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	ForwardUsername            bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader      string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization       bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
+	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
+	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 	Username                   string
 }
 
@@ -67,6 +68,7 @@ func CreateConfig() *Config {
 		ForwardExtraLdapHeaders:    false,
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
+		AllowedGroups:              nil,
 		Username:                   "",
 	}
 }
@@ -120,14 +122,24 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	isValidUser, entry, err := LdapCheckUser(conn, la.config, username, password)
 
-	defer conn.Close()
-
 	if !isValidUser {
+		defer conn.Close()
 		LoggerERROR.Printf("%s", err)
 		LoggerERROR.Printf("Authentication failed")
 		RequireAuth(rw, req, la.config, err)
 		return
 	}
+
+	hasValidGroups, err := LdapCheckUserGroups(conn, la.config, entry, username)
+
+	if !hasValidGroups {
+		defer conn.Close()
+		LoggerERROR.Printf("%s", err)
+		RequireAuth(rw, req, la.config, err)
+		return
+	}
+
+	defer conn.Close()
 
 	LoggerINFO.Printf("Authentication succeeded")
 
@@ -162,7 +174,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 		userDN := fmt.Sprintf("%s=%s,%s", config.Attribute, username, config.BaseDN)
 		LoggerDEBUG.Printf("Authenticating User: %s", userDN)
 		err := conn.Bind(userDN, password)
-		return err == nil, &ldap.Entry{}, err
+		return err == nil, ldap.NewEntry(userDN, nil), err
 	}
 
 	LoggerDEBUG.Printf("Running in Search Mode")
@@ -179,6 +191,54 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	// Bind User and password
 	err = conn.Bind(userDN, password)
 	return err == nil, result.Entries[0], err
+}
+
+func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) (bool, error) {
+
+	if len(config.AllowedGroups) == 0 {
+		return true, nil
+	}
+
+	found := false
+	err := error(nil)
+
+	for _, g := range config.AllowedGroups {
+
+		group_filter := fmt.Sprintf("(|"+
+			"(member=%s)"+
+			"(uniqueMember=%s)"+
+			"(memberUid=%s)"+
+			")", entry.DN, entry.DN, username)
+
+		LoggerDEBUG.Printf("Searching Group: '%s' with User: '%s'", g, entry.DN)
+
+		search := ldap.NewSearchRequest(
+			g,
+			ldap.ScopeBaseObject,
+			ldap.NeverDerefAliases,
+			0,
+			0,
+			false,
+			group_filter,
+			[]string{"member", "uniqueMember", "memberUid"},
+			nil,
+		)
+
+		result, err := conn.Search(search)
+
+		if err == nil {
+			err = fmt.Errorf("User not in any of the allowed groups")
+		}
+
+		// Found one group that user belongs, break loop
+		if len(result.Entries) > 0 {
+			LoggerDEBUG.Printf("User: '%s' found in Group: '%s'", entry.DN, g)
+			found = true
+			break
+		}
+	}
+
+	return found, err
 }
 
 // RequireAuth set Auth request.

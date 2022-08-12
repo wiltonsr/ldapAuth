@@ -141,7 +141,7 @@ LDAP server port where queries will be performed.
 
 _Optional, Default: `cn`_
 
-The attribute used to bind a user in [`Bind Mode`](#bind-mode). Bind queries use this pattern: `<attribute>=<username>,<baseDN>`, where the username is extracted from the request header.
+The attribute used to bind a user in [`Bind Mode`](#bind-mode). Bind queries use this pattern: `<attribute>=<username>,<baseDN>`, where the username is extracted from the request header. If [`AllowedGroups`](#allowedGroups) option was used in [`Bind Mode`](#bind-mode), the same pattern is added when searching if the user belongs to group.
 
 ##### `searchFilter`
 
@@ -217,3 +217,11 @@ If the LDAP middleware receives a request with a missing or invalid Authorizatio
 _Optional, Default: `""`_
 
 The name of the realm to specify in the `WWW-Authenticate` header. This option is ineffective unless the `wwwAuthenticateHeader` option is set to true.
+
+##### `allowedGroups` needs `traefik` >= [`v2.8.2`](https://github.com/traefik/traefik/releases/tag/v2.8.2)
+
+_Optional, Default: `[]`_
+
+The list of LDAP group DNs that users must be members of to be granted access. If a user is in any one of the listed groups, then that user is granted access.
+
+If setted to an empty list will allow all users that have an LDAP account to log in, without performing any group membership checks.
