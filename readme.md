@@ -137,6 +137,45 @@ _Optional, Default: `389`_
 
 LDAP server port where queries will be performed.
 
+##### `useTLS`
+_Optional, Default: `false`_
+
+Set to true if LDAP server should use an encrypted TLS connection, either with STARTTLS or LDAPS.
+
+##### `startTLS`
+_Optional, Default: `false`_
+
+If set to true, instructs `ldapAuth` to issue a `StartTLS` request when initializing the connection with the LDAP server. This is not used if the `useTLS` option is set to `false`.
+
+##### `certificateAuthority`
+_Optional, Default: `""`_
+
+The `certificateAuthority` option should contain one or more PEM-encoded certificates to use to establish a connection with the LDAP server if the connection uses TLS but that the certificate was signed by a custom Certificate Authority.
+
+
+Example:
+```yml
+    certificateAuthority: |-
+        -----BEGIN CERTIFICATE-----
+        MIIB9TCCAWACAQAwgbgxGTAXBgNVBAoMEFF1b1ZhZGlzIExpbWl0ZWQxHDAaBgNV
+        BAsME0RvY3VtZW50IERlcGFydG1lbnQxOTA3BgNVBAMMMFdoeSBhcmUgeW91IGRl
+        Y29kaW5nIG1lPyAgVGhpcyBpcyBvbmx5IGEgdGVzdCEhITERMA8GA1UEBwwISGFt
+        aWx0b24xETAPBgNVBAgMCFBlbWJyb2tlMQswCQYDVQQGEwJCTTEPMA0GCSqGSIb3
+        DQEJARYAMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCJ9WRanG/fUvcfKiGl
+        EL4aRLjGt537mZ28UU9/3eiJeJznNSOuNLnF+hmabAu7H0LT4K7EdqfF+XUZW/2j
+        RKRYcvOUDGF9A7OjW7UfKk1In3+6QDCi7X34RE161jqoaJjrm/T18TOKcgkkhRzE
+        apQnIDm0Ea/HVzX/PiSOGuertwIDAQABMAsGCSqGSIb3DQEBBQOBgQBzMJdAV4QP
+        Awel8LzGx5uMOshezF/KfP67wJ93UW+N7zXY6AwPgoLj4Kjw+WtU684JL8Dtr9FX
+        ozakE+8p06BpxegR4BR3FMHf6p+0jQxUEAkAyb/mVgm66TyghDGC6/YkiKoZptXQ
+        98TwDIK/39WEB/V607As+KoYazQG8drorw==
+        -----END CERTIFICATE-----
+```
+
+##### `insecureSkipVerify`
+_Optional, Default: `false`_
+
+When `useTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
+
 ##### `attribute`
 
 _Optional, Default: `cn`_
