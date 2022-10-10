@@ -5,15 +5,19 @@ package ldapAuth
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/go-ldap/ldap/v3"
@@ -35,6 +39,10 @@ type Config struct {
 	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
 	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
 	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
+	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
+	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
+	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
 	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
 	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
@@ -55,8 +63,12 @@ func CreateConfig() *Config {
 	return &Config{
 		Enabled:                    true,
 		LogLevel:                   "INFO",
-		URL:                        "",   // Supports: ldap://, ldaps://
-		Port:                       389,  // Usually 389 or 636
+		URL:                        "",  // Supports: ldap://, ldaps://
+		Port:                       389, // Usually 389 or 636
+		UseTLS:                     false,
+		StartTLS:                   false,
+		CertificateAuthority:       "",
+		InsecureSkipVerify:         false,
 		Attribute:                  "cn", // Usually uid or sAMAccountname
 		SearchFilter:               "",
 		BaseDN:                     "",
@@ -113,7 +125,14 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	conn, err := Connect(la.config.URL, la.config.Port)
+	var certPool *x509.CertPool
+
+	if la.config.CertificateAuthority != "" {
+		certPool = x509.NewCertPool()
+		certPool.AppendCertsFromPEM([]byte(la.config.CertificateAuthority))
+	}
+
+	conn, err := Connect(la.config.URL, la.config.Port, la.config.UseTLS, la.config.StartTLS, la.config.InsecureSkipVerify, certPool)
 	if err != nil {
 		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, la.config, err)
@@ -256,12 +275,67 @@ func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err .
 }
 
 // Connect return a LDAP Connection.
-func Connect(url string, port uint16) (*ldap.Conn, error) {
-	conn, err := ldap.DialURL(fmt.Sprintf("%s:%d", url, port))
+func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bool, ca *x509.CertPool) (*ldap.Conn, error) {
+	var conn *ldap.Conn = nil
+	var err error = nil
+	u, err := url.Parse(addr)
+
 	if err != nil {
 		return nil, err
 	}
 
+	host, _, _ := net.SplitHostPort(u.Host)
+	LoggerDEBUG.Printf("Host: %s ", host)
+
+	address := net.JoinHostPort(host, strconv.FormatUint(uint64(port), 10))
+
+	LoggerDEBUG.Printf("Connect Address: %s ", address)
+
+	if useTLS {
+		tlsCfg := &tls.Config{
+			InsecureSkipVerify: skipVerify,
+			ServerName:         host,
+			RootCAs:            ca,
+		}
+		if startTLS {
+			conn, err = dial("tcp", address)
+			if err == nil {
+				err = conn.StartTLS(tlsCfg)
+			}
+		} else {
+			conn, err = dialTLS("tcp", address, tlsCfg)
+		}
+	} else {
+		conn, err = dial("tcp", address)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+
+}
+
+// dial applies connects to the given address on the given network using net.Dial
+func dial(network, addr string) (*ldap.Conn, error) {
+	c, err := net.Dial(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	conn := ldap.NewConn(c, false)
+	conn.Start()
+	return conn, nil
+}
+
+// dialTLS connects to the given address on the given network using tls.Dial
+func dialTLS(network, addr string, config *tls.Config) (*ldap.Conn, error) {
+	c, err := tls.Dial(network, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	conn := ldap.NewConn(c, true)
+	conn.Start()
 	return conn, nil
 }
 
@@ -307,7 +381,7 @@ func SearchMode(conn *ldap.Conn, config *Config) (*ldap.SearchResult, error) {
 	case len(result.Entries) == 1:
 		return result, nil
 	case len(result.Entries) < 1:
-		return nil, fmt.Errorf("search silter return empty result")
+		return nil, fmt.Errorf("search filter return empty result")
 	default:
 		return nil, fmt.Errorf(fmt.Sprintf("search filter return multiple entries (%d)", len(result.Entries)))
 	}
