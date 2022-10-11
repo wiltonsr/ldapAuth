@@ -284,7 +284,11 @@ func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bo
 		return nil, err
 	}
 
-	host, _, _ := net.SplitHostPort(u.Host)
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		// we assume that error is due to missing port
+		host = u.Host
+	}
 	LoggerDEBUG.Printf("Host: %s ", host)
 
 	address := net.JoinHostPort(host, strconv.FormatUint(uint64(port), 10))
