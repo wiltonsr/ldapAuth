@@ -2,7 +2,10 @@ module github.com/wiltonsr/ldapAuth
 
 go 1.17
 
-require github.com/go-ldap/ldap/v3 v3.4.4
+require (
+	github.com/go-ldap/ldap/v3 v3.4.4
+	github.com/google/uuid v1.3.0
+)
 
 require (
 	github.com/Azure/go-ntlmssp v0.0.0-20220621081337-cb9428e4ac1e // indirect
