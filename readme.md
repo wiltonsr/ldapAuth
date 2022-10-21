@@ -20,7 +20,7 @@ This project is an in progress effort to create an open source middleware that e
 
 ## Requirements
 
-- Yaegi >= [v0.11.1](https://github.com/traefik/yaegi/releases/tag/v0.11.1)
+- Yaegi >= [v0.14.2](https://github.com/traefik/yaegi/releases/tag/v0.14.2)
 - Traefik >= [v2.5.5](https://github.com/traefik/traefik/releases/tag/v2.5.5)
 - go-ldap v3 >= [v3.1.4](https://github.com/go-ldap/ldap/releases/tag/v3.1.4)
 - gorilla/sessions >= [v1.2.1](https://github.com/gorilla/sessions/releases/tag/v1.2.1)
