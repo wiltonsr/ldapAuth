@@ -137,6 +137,20 @@ _Optional, Default: `389`_
 
 LDAP server port where queries will be performed.
 
+##### `CacheTimeout`
+_Optional, Default: `300`_
+
+Indicates the number of `seconds` until the cookie session expires. A zero or negative number will expire the cookie immediately. 
+##### `CacheCookieName`
+_Optional, Default: `ldapAuth_session_token`_
+
+The cookie session name.
+
+##### `CacheKey`
+_Optional, Default: `super-secret-key`_
+
+The key used to criptography cookie session informations. You `must` use a strong value here.
+
 ##### `useTLS`
 _Optional, Default: `false`_
 

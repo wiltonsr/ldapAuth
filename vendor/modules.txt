@@ -7,9 +7,12 @@ github.com/go-asn1-ber/asn1-ber
 # github.com/go-ldap/ldap/v3 v3.4.4
 ## explicit; go 1.14
 github.com/go-ldap/ldap/v3
-# github.com/google/uuid v1.3.0
+# github.com/gorilla/securecookie v1.1.1
 ## explicit
-github.com/google/uuid
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.2.1
+## explicit
+github.com/gorilla/sessions
 # golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 ## explicit; go 1.17
 golang.org/x/crypto/md4
