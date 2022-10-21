@@ -19,23 +19,20 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/google/uuid"
-	s "github.com/wiltonsr/ldapAuth/pkg/session"
+	"github.com/gorilla/sessions"
 )
 
 // nolint
 var (
+	store *sessions.CookieStore
 	// LoggerDEBUG level.
 	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerINFO level.
 	LoggerINFO = log.New(ioutil.Discard, "INFO: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerERROR level.
 	LoggerERROR = log.New(ioutil.Discard, "ERROR: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
-	// sessions map
-	sessions = map[string]s.Session{}
 )
 
 // Config the plugin configuration.
@@ -44,8 +41,9 @@ type Config struct {
 	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
 	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
 	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
-	CacheTimeout               uint16   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
+	CacheTimeout               uint32   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
 	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
+	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
 	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
 	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
 	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
@@ -74,6 +72,7 @@ func CreateConfig() *Config {
 		Port:                       389, // Usually 389 or 636
 		CacheTimeout:               300, // In seconds, default to 5m
 		CacheCookieName:            "ldapAuth_session_token",
+		CacheKey:                   "super-secret-key",
 		UseTLS:                     false,
 		StartTLS:                   false,
 		CertificateAuthority:       "",
@@ -109,6 +108,12 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	LogConfigParams(config)
 
+	// Create new session with CacheKey and CacheTimeout.
+	store = sessions.NewCookieStore([]byte(config.CacheKey))
+	store.Options = &sessions.Options{
+		MaxAge: int(config.CacheTimeout),
+	}
+
 	return &LdapAuth{
 		name:   name,
 		next:   next,
@@ -125,30 +130,8 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	var err error
 
-	c, err := req.Cookie(la.config.CacheCookieName)
-
-	if err == nil {
-		sessionToken := c.Value
-		userSession, exists := sessions[sessionToken]
-
-		if !exists {
-			err = errors.New("Invalid Session. Please, reauthenticate")
-			RequireAuth(rw, req, la.config, err)
-			return
-		}
-		if userSession.IsExpired() {
-			delete(sessions, sessionToken)
-			err = errors.New("Expired Session. Please, reauthenticate")
-			RequireAuth(rw, req, la.config, err)
-			return
-		}
-
-		LoggerDEBUG.Printf("Session token Valid! Passing request...")
-		la.next.ServeHTTP(rw, req)
-		return
-	} else {
-		LoggerDEBUG.Println("No session found! Trying to authenticate in LDAP")
-	}
+	session, _ := store.Get(req, la.config.CacheCookieName)
+	LoggerDEBUG.Printf("Session details: %v", session)
 
 	username, password, ok := req.BasicAuth()
 
@@ -159,6 +142,24 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		RequireAuth(rw, req, la.config, err)
 		return
 	}
+
+	if auth, ok := session.Values["authenticated"].(bool); ok && auth {
+		if session.Values["username"] == username {
+			LoggerDEBUG.Printf("Session token Valid! Passing request...")
+			la.next.ServeHTTP(rw, req)
+			return
+		}
+		err = errors.New(fmt.Sprintf("Session user: '%s' != Auth user: '%s'. Please, reauthenticate", session.Values["username"], username))
+		// Invalidate session.
+		session.Values["authenticated"] = false
+		session.Values["username"] = username
+		session.Options.MaxAge = -1
+		session.Save(req, rw)
+		RequireAuth(rw, req, la.config, err)
+		return
+	}
+
+	LoggerDEBUG.Println("No session found! Trying to authenticate in LDAP")
 
 	var certPool *x509.CertPool
 
@@ -197,18 +198,12 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	LoggerINFO.Printf("Authentication succeeded")
 
-	sessionToken := uuid.NewString()
-	expiresAt := time.Now().Add(time.Duration(la.config.CacheTimeout) * time.Second)
-	sessions[sessionToken] = s.NewSession(username, expiresAt)
-	http.SetCookie(rw, &http.Cookie{
-		Name:    la.config.CacheCookieName,
-		Value:   sessionToken,
-		Expires: expiresAt,
-	})
+	// Set user as authenticated.
+	session.Values["username"] = username
+	session.Values["authenticated"] = true
+	session.Save(req, rw)
 
-	LoggerDEBUG.Println(sessions)
-
-	// Sanitize Some Headers Infos
+	// Sanitize Some Headers Infos.
 	if la.config.ForwardUsername {
 		req.URL.User = url.User(username)
 		req.Header[la.config.ForwardUsernameHeader] = []string{username}
@@ -223,7 +218,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	/*
 	 Prevent expose username and password on Header
-	 if ForwardAuthorization option is set
+	 if ForwardAuthorization option is set.
 	*/
 	if !la.config.ForwardAuthorization {
 		req.Header.Del("Authorization")
@@ -245,7 +240,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	LoggerDEBUG.Printf("Running in Search Mode")
 
 	result, err := SearchMode(conn, config)
-	// Return if search fails
+	// Return if search fails.
 	if err != nil {
 		return false, &ldap.Entry{}, err
 	}
@@ -253,7 +248,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	userDN := result.Entries[0].DN
 	LoggerINFO.Printf("Authenticating User: %s", userDN)
 
-	// Bind User and password
+	// Bind User and password.
 	err = conn.Bind(userDN, password)
 	return err == nil, result.Entries[0], err
 }
@@ -295,7 +290,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			err = fmt.Errorf("User not in any of the allowed groups")
 		}
 
-		// Found one group that user belongs, break loop
+		// Found one group that user belongs, break loop.
 		if len(result.Entries) > 0 {
 			LoggerDEBUG.Printf("User: '%s' found in Group: '%s'", entry.DN, g)
 			found = true
@@ -308,6 +303,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 
 // RequireAuth set Auth request.
 func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err ...error) {
+	LoggerDEBUG.Println(err)
 	w.Header().Set("Content-Type", "text/plan")
 	if config.WWWAuthenticateHeader {
 		wwwHeaderContent := "Basic"
@@ -332,7 +328,7 @@ func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bo
 
 	host, _, err := net.SplitHostPort(u.Host)
 	if err != nil {
-		// we assume that error is due to missing port
+		// we assume that error is due to missing port.
 		host = u.Host
 	}
 	LoggerDEBUG.Printf("Host: %s ", host)
@@ -367,7 +363,7 @@ func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bo
 
 }
 
-// dial applies connects to the given address on the given network using net.Dial
+// dial applies connects to the given address on the given network using net.Dial.
 func dial(network, addr string) (*ldap.Conn, error) {
 	c, err := net.Dial(network, addr)
 	if err != nil {
@@ -378,7 +374,7 @@ func dial(network, addr string) (*ldap.Conn, error) {
 	return conn, nil
 }
 
-// dialTLS connects to the given address on the given network using tls.Dial
+// dialTLS connects to the given address on the given network using tls.Dial.
 func dialTLS(network, addr string, config *tls.Config) (*ldap.Conn, error) {
 	c, err := tls.Dial(network, addr, config)
 	if err != nil {
