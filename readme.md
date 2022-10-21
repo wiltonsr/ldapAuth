@@ -23,6 +23,7 @@ This project is an in progress effort to create an open source middleware that e
 - Yaegi >= [v0.11.1](https://github.com/traefik/yaegi/releases/tag/v0.11.1)
 - Traefik >= [v2.5.5](https://github.com/traefik/traefik/releases/tag/v2.5.5)
 - go-ldap v3 >= [v3.1.4](https://github.com/go-ldap/ldap/releases/tag/v3.1.4)
+- gorilla/sessions >= [v1.2.1](https://github.com/gorilla/sessions/releases/tag/v1.2.1)
 
 [Traefik](https://traefik.io) plugins are developed using the compiled [Go language](https://golang.org). Rather than being pre-compiled and linked, however, plugins are executed on the fly by [Yaegi](https://github.com/traefik/yaegi), an embedded Go interpreter. Due to [traefik/yaegi#1275](https://github.com/traefik/yaegi/issues/1275), the `ldap-go` module only works after the listed version.
 
@@ -148,6 +149,7 @@ The cookie session name.
 
 ##### `CacheKey`
 _Optional, Default: `super-secret-key`_
+Needs `traefik` >= [`v2.8.5`](https://github.com/traefik/traefik/releases/tag/v2.8.5)
 
 The key used to criptography cookie session informations. You `must` use a strong value here.
 
