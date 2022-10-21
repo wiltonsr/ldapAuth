@@ -1,5 +1,5 @@
 // Package ldapAuth a ldap authentication plugin.
-//nolint
+// nolint
 package ldapAuth
 
 import (
@@ -19,11 +19,14 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/google/uuid"
+	s "github.com/wiltonsr/ldapAuth/pkg/session"
 )
 
-//nolint
+// nolint
 var (
 	// LoggerDEBUG level.
 	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -31,6 +34,8 @@ var (
 	LoggerINFO = log.New(ioutil.Discard, "INFO: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerERROR level.
 	LoggerERROR = log.New(ioutil.Discard, "ERROR: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// sessions map
+	sessions = map[string]s.Session{}
 )
 
 // Config the plugin configuration.
@@ -39,6 +44,8 @@ type Config struct {
 	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
 	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
 	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	CacheTimeout               uint16   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
+	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
 	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
 	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
 	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
@@ -65,6 +72,8 @@ func CreateConfig() *Config {
 		LogLevel:                   "INFO",
 		URL:                        "",  // Supports: ldap://, ldaps://
 		Port:                       389, // Usually 389 or 636
+		CacheTimeout:               300, // In seconds, default to 5m
+		CacheCookieName:            "ldapAuth_session_token",
 		UseTLS:                     false,
 		StartTLS:                   false,
 		CertificateAuthority:       "",
@@ -115,6 +124,32 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	var err error
+
+	c, err := req.Cookie(la.config.CacheCookieName)
+
+	if err == nil {
+		sessionToken := c.Value
+		userSession, exists := sessions[sessionToken]
+
+		if !exists {
+			err = errors.New("Invalid Session. Please, reauthenticate")
+			RequireAuth(rw, req, la.config, err)
+			return
+		}
+		if userSession.IsExpired() {
+			delete(sessions, sessionToken)
+			err = errors.New("Expired Session. Please, reauthenticate")
+			RequireAuth(rw, req, la.config, err)
+			return
+		}
+
+		LoggerDEBUG.Printf("Session token Valid! Passing request...")
+		la.next.ServeHTTP(rw, req)
+		return
+	} else {
+		LoggerDEBUG.Println("No session found! Trying to authenticate in LDAP")
+	}
+
 	username, password, ok := req.BasicAuth()
 
 	la.config.Username = username
@@ -161,6 +196,17 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	defer conn.Close()
 
 	LoggerINFO.Printf("Authentication succeeded")
+
+	sessionToken := uuid.NewString()
+	expiresAt := time.Now().Add(time.Duration(la.config.CacheTimeout) * time.Second)
+	sessions[sessionToken] = s.NewSession(username, expiresAt)
+	http.SetCookie(rw, &http.Cookie{
+		Name:    la.config.CacheCookieName,
+		Value:   sessionToken,
+		Expires: expiresAt,
+	})
+
+	LoggerDEBUG.Println(sessions)
 
 	// Sanitize Some Headers Infos
 	if la.config.ForwardUsername {
