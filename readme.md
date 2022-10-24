@@ -11,7 +11,7 @@
 <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/wiltonsr/ldapAuth?include_prereleases">
 <img alt="GitHub go.mod Go version" src="https://img.shields.io/github/go-mod/go-version/wiltonsr/ldapAuth">
 <img alt="GitHub issues" src="https://img.shields.io/github/issues/wiltonsr/ldapAuth">
-<img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/wiltonsr/ldapAuth/master">
+<img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/wiltonsr/ldapAuth/main">
 </h1>
 
 # Traefik ldapAuth Middleware
