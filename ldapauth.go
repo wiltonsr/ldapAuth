@@ -439,7 +439,6 @@ func ParseSearchFilter(config *Config) (string, error) {
 
 	filter = strings.Trim(filter, "\n\t")
 	filter = strings.TrimSpace(filter)
-	filter = strings.ReplaceAll(filter, " ", "")
 	filter = strings.Replace(filter, "\\", "", -1)
 
 	tmpl, err := template.New("search_template").Parse(filter)
