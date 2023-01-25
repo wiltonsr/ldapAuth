@@ -138,7 +138,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	la.config.Username = username
 
 	if !ok {
-		err = errors.New("no valid 'Authentication: Basic xxxx' header found in request")
+		err = errors.New("no valid 'Authorization: Basic xxxx' header found in request")
 		RequireAuth(rw, req, la.config, err)
 		return
 	}
