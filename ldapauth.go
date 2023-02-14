@@ -284,10 +284,12 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			nil,
 		)
 
-		result, err := conn.Search(search)
+		var result *ldap.SearchResult
 
-		if err == nil {
-			err = fmt.Errorf("User not in any of the allowed groups")
+		result, err = conn.Search(search)
+
+		if err != nil {
+			LoggerINFO.Printf("%s", err)
 		}
 
 		// Found one group that user belongs, break loop.
@@ -296,6 +298,8 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			found = true
 			break
 		}
+
+		err = fmt.Errorf("User not in any of the allowed groups")
 	}
 
 	return found, err
