@@ -20,12 +20,9 @@ This project is an in progress effort to create an open source middleware that e
 
 ## Requirements
 
-- Yaegi >= [v0.14.2](https://github.com/traefik/yaegi/releases/tag/v0.14.2)
-- Traefik >= [v2.5.5](https://github.com/traefik/traefik/releases/tag/v2.5.5)
-- go-ldap v3 >= [v3.1.4](https://github.com/go-ldap/ldap/releases/tag/v3.1.4)
-- gorilla/sessions >= [v1.2.1](https://github.com/gorilla/sessions/releases/tag/v1.2.1)
+- Traefik >= [v2.10.0](https://github.com/traefik/traefik/releases/tag/v2.5.5)
 
-[Traefik](https://traefik.io) plugins are developed using the compiled [Go language](https://golang.org). Rather than being pre-compiled and linked, however, plugins are executed on the fly by [Yaegi](https://github.com/traefik/yaegi), an embedded Go interpreter. Due to [traefik/yaegi#1275](https://github.com/traefik/yaegi/issues/1275), the `ldap-go` module only works after the listed version.
+[Traefik](https://traefik.io) plugins are developed using the compiled [Go language](https://golang.org). Rather than being pre-compiled and linked, however, plugins are executed on the fly by [Yaegi](https://github.com/traefik/yaegi), an embedded Go interpreter. Due to [traefik/yaegi#1275](https://github.com/traefik/yaegi/issues/1275) and [traefik/yaegi#1484](https://github.com/traefik/yaegi/issues/1484), the `ldap-go` module only works after the listed version.
 
 ## Usage
 
