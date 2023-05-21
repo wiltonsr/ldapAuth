@@ -268,7 +268,8 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			"(member=%s)"+
 			"(uniqueMember=%s)"+
 			"(memberUid=%s)"+
-			")", ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username))
+			"(member:1.2.840.113556.1.4.1941:=%s)"+
+			")", ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), ldap.EscapeFilter(entry.DN))
 
 		LoggerDEBUG.Printf("Searching Group: '%s' with User: '%s'", g, entry.DN)
 
