@@ -309,7 +309,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 // RequireAuth set Auth request.
 func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err ...error) {
 	LoggerDEBUG.Println(err)
-	w.Header().Set("Content-Type", "text/plan")
+	w.Header().Set("Content-Type", "text/plain")
 	if config.WWWAuthenticateHeader {
 		wwwHeaderContent := "Basic"
 		if config.WWWAuthenticateHeaderRealm != "" {
