@@ -317,8 +317,11 @@ func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err .
 		}
 		w.Header().Set("WWW-Authenticate", wwwHeaderContent)
 	}
+
 	w.WriteHeader(http.StatusUnauthorized)
-	_, _ = w.Write([]byte(fmt.Sprintf("%d %s\nError: %s\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)))
+
+	errMsg := strings.Trim(err[0].Error(), "\x00")
+	_, _ = w.Write([]byte(fmt.Sprintf("%d %s\nError: %s\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), errMsg)))
 }
 
 // Connect return a LDAP Connection.
