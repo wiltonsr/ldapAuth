@@ -278,6 +278,17 @@ _Optional, Default: `[]`_
 
 The list of LDAP group DNs that users must be members of to be granted access. If a user is in any of the listed groups, then that user is granted access.
 
-If set to an empty list, all users with an LDAP account can log in, without performing any group membership checks.
+If set to an empty list, all users with an LDAP account can log in, without performing any group membership checks unless `allowedUsers` is set. In that case, the user must be a part of the `allowedUsers` list.
 
 `allowedGroups` is not supported with labels, because multiple value labels are separated with commas. You must use `toml` or `yaml` configuration file. For more details, check [examples](https://github.com/wiltonsr/ldapAuth/tree/main/examples) page.
+
+##### `allowedUsers`
+Needs `traefik` >= [`v2.8.2`](https://github.com/traefik/traefik/releases/tag/v2.8.2)
+
+_Optional, Default: `[]`_
+
+The list of LDAP user DNs or usernames to be granted access. If a user is in the listed users, then that user is granted access.
+
+If set to an empty list, all users with an LDAP account can log in, unless `allowedGroups` is set. In that case, group membership checks will be performed.
+
+`allowedUsers` is not supported with labels, because multiple value labels are separated with commas. You must use `toml` or `yaml` configuration file. For more details, check [examples](https://github.com/wiltonsr/ldapAuth/tree/main/examples) page.

@@ -38,7 +38,7 @@ services:
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
-      # AllowedGroups is not supported with labels, because multiple value labels are separated with commas
+      # AllowedGroups and AllowedUsers are not supported with labels, because multiple value labels are separated with commas
       # SearchFilter must not escape curly braces when using labels
       # - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
       # =================================================================================================
