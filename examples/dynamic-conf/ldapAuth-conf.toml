@@ -7,6 +7,7 @@ LogLevel = "DEBUG"
 Port = "389"
 Url = "ldap://ldap.forumsys.com"
 AllowedGroups = ["ou=mathematicians,dc=example,dc=com","ou=italians,ou=scientists,dc=example,dc=com"]
+AllowedUsers = ["euler", "euclid"]
 # SearchFilter must escape curly braces when using toml file
 # https://toml.io/en/v1.0.0#string
 # SearchFilter = '''(\{\{.Attribute\}\}=\{\{.Username\}\})'''

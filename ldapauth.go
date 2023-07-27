@@ -60,6 +60,7 @@ type Config struct {
 	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
 	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
 	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
+	AllowedUsers               []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
 	Username                   string
 }
 
@@ -89,6 +90,7 @@ func CreateConfig() *Config {
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
 		AllowedGroups:              nil,
+		AllowedUsers:               nil,
 		Username:                   "",
 	}
 }
@@ -134,6 +136,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("Session details: %v", session)
 
 	username, password, ok := req.BasicAuth()
+	username = strings.ToLower(username)
 
 	la.config.Username = username
 
@@ -185,13 +188,12 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	hasValidGroups, err := LdapCheckUserGroups(conn, la.config, entry, username)
-
-	if !hasValidGroups {
+	isAuthorized, err := LdapCheckUserAuthorized(conn, la.config, entry, username)
+	if !isAuthorized {
 		defer conn.Close()
 		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, la.config, err)
-		return
+		return 
 	}
 
 	defer conn.Close()
@@ -227,7 +229,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	la.next.ServeHTTP(rw, req)
 }
 
-// LdapCheckUser chec if user and password are correct.
+// LdapCheckUser check if user and password are correct.
 func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (bool, *ldap.Entry, error) {
 	if config.SearchFilter == "" {
 		LoggerDEBUG.Printf("Running in Bind Mode")
@@ -253,10 +255,60 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	return err == nil, result.Entries[0], err
 }
 
+// LdapCheckUserAuthorized check if user is authorized post-authentication
+func LdapCheckUserAuthorized(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) (bool, error) {
+	// Check if authorization is required or simply authentication
+	if len(config.AllowedUsers) == 0 && len(config.AllowedGroups) == 0 {
+		LoggerDEBUG.Printf("No authorization requirements")
+		return true, nil
+	}
+
+	// Check if user is explicitly allowed
+	if LdapCheckAllowedUsers(conn, config, entry, username) {
+		return true, nil
+	}
+
+	// Check if user is allowed through groups
+	isValidGroups, err := LdapCheckUserGroups(conn, config, entry, username)	
+	if isValidGroups {
+		return true, err
+	}
+
+	errMsg := fmt.Sprintf("User '%s' does not match any allowed users nor allowed groups.", username)
+
+	if err != nil {
+		err = fmt.Errorf("%w\n%s", err, errMsg)
+	} else {
+		err = errors.New(errMsg)
+	}
+
+	return false, err
+}
+
+// LdapCheckAllowedUsers check if user is explicitly allowed in AllowedUsers list
+func LdapCheckAllowedUsers(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) bool {
+	if len(config.AllowedUsers) == 0 {
+		return false
+	}
+
+	found := false
+
+	for _, u := range config.AllowedUsers {
+		lowerAllowedUser := strings.ToLower(u)
+		if lowerAllowedUser == username || lowerAllowedUser == strings.ToLower(entry.DN) {
+			LoggerDEBUG.Printf("User: '%s' explicitly allowed in AllowedUsers", entry.DN)
+			found = true
+		}
+	}
+
+	return found
+}
+
+// LdapCheckUserGroups check if the is user is a member of any of the AllowedGroups list
 func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) (bool, error) {
 
 	if len(config.AllowedGroups) == 0 {
-		return true, nil
+		return false, nil
 	}
 
 	found := false
@@ -300,7 +352,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			break
 		}
 
-		err = fmt.Errorf("User not in any of the allowed groups")
+		LoggerDEBUG.Printf("User '%s' not in any of the allowed groups", username)
 	}
 
 	return found, err
