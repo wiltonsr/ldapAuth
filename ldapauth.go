@@ -193,7 +193,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		defer conn.Close()
 		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, la.config, err)
-		return 
+		return
 	}
 
 	defer conn.Close()
@@ -269,7 +269,7 @@ func LdapCheckUserAuthorized(conn *ldap.Conn, config *Config, entry *ldap.Entry,
 	}
 
 	// Check if user is allowed through groups
-	isValidGroups, err := LdapCheckUserGroups(conn, config, entry, username)	
+	isValidGroups, err := LdapCheckUserGroups(conn, config, entry, username)
 	if isValidGroups {
 		return true, err
 	}
@@ -352,7 +352,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			break
 		}
 
-		LoggerDEBUG.Printf("User '%s' not in any of the allowed groups", username)
+		LoggerDEBUG.Printf("User: '%s' not found in Group: '%s'", username, g)
 	}
 
 	return found, err

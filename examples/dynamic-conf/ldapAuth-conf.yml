@@ -14,7 +14,7 @@ http:
             - ou=italians,ou=scientists,dc=example,dc=com
           AllowedUsers:
             - euler
-            - euclid
+            - uid=euclid,dc=example,dc=com
           # SearchFilter must escape curly braces when using yml file
           # https://yaml.org/spec/1.1/#id872840
           # SearchFilter: (\{\{.Attribute\}\}=\{\{.Username\}\})
