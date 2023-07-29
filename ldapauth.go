@@ -43,6 +43,8 @@ type Config struct {
 	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
 	CacheTimeout               uint32   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
 	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
+	CacheCookiePath            string   `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
+	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
 	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
 	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
 	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
@@ -73,6 +75,8 @@ func CreateConfig() *Config {
 		Port:                       389, // Usually 389 or 636
 		CacheTimeout:               300, // In seconds, default to 5m
 		CacheCookieName:            "ldapAuth_session_token",
+		CacheCookiePath:            "",
+		CacheCookieSecure:          false,
 		CacheKey:                   "super-secret-key",
 		UseTLS:                     false,
 		StartTLS:                   false,
@@ -113,7 +117,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	// Create new session with CacheKey and CacheTimeout.
 	store = sessions.NewCookieStore([]byte(config.CacheKey))
 	store.Options = &sessions.Options{
-		MaxAge: int(config.CacheTimeout),
+		HttpOnly: true,
+		MaxAge:   int(config.CacheTimeout),
+		Path:     config.CacheCookiePath,
+		Secure:   config.CacheCookieSecure,
 	}
 
 	return &LdapAuth{

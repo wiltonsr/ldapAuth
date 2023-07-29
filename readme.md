@@ -138,18 +138,29 @@ LDAP server port where queries will be performed.
 ##### `cacheTimeout`
 _Optional, Default: `300`_
 
-Indicates the number of `seconds` until the cookie session expires. A zero or negative number will expire the cookie immediately. 
+Indicates the number of `seconds` until the session cookie expires. A zero or negative number will expire the cookie immediately. 
+
 ##### `cacheCookieName`
 _Optional, Default: `ldapAuth_session_token`_
 
-The cookie session name.
+The session cookie name.
+
+##### `cacheCookiePath`
+_Optional, Default: `""`_
+
+The session cookie path. By default, the cookie path will be set to the request path.
+
+##### `cacheCookieSecure`
+_Optional, Default: `false`_
+
+Set to true if the session cookie should have the secure flag. The cookie will only be transmitted over an HTTPS connection.
 
 ##### `cacheKey`
 Needs `traefik` >= [`v2.8.5`](https://github.com/traefik/traefik/releases/tag/v2.8.5)
 
 _Optional, Default: `super-secret-key`_
 
-The key used to cryptography cookie session information. You `must` use a strong value here.
+The key used to encrypt session cookie information. You `must` use a strong value here.
 
 ##### `useTLS`
 _Optional, Default: `false`_
