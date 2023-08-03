@@ -61,6 +61,7 @@ type Config struct {
 	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
 	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
 	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	EnableNestedGroupFilter    bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
 	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 	AllowedUsers               []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
 	Username                   string
@@ -93,6 +94,7 @@ func CreateConfig() *Config {
 		ForwardExtraLdapHeaders:    false,
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
+		EnableNestedGroupFilter:    false,
 		AllowedGroups:              nil,
 		AllowedUsers:               nil,
 		Username:                   "",
@@ -320,15 +322,28 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 
 	found := false
 	err := error(nil)
+	var group_filter bytes.Buffer
+
+	templ := "(|" +
+		"(member={{.UserDN}})" +
+		"(uniqueMember={{.UserDN}})" +
+		"(memberUid={{.Username}})" +
+		"{{if .EnableNestedGroupFilter}}" +
+		"(member:1.2.840.113556.1.4.1941:={{.UserDN}})" +
+		"{{end}}" +
+		")"
+
+	template.Must(template.New("group_filter_template").
+		Parse(templ)).
+		Execute(&group_filter, struct {
+			UserDN                  string
+			Username                string
+			EnableNestedGroupFilter bool
+		}{ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), config.EnableNestedGroupFilter})
+
+	LoggerDEBUG.Printf("Group Filter: '%s'", group_filter.String())
 
 	for _, g := range config.AllowedGroups {
-
-		group_filter := fmt.Sprintf("(|"+
-			"(member=%s)"+
-			"(uniqueMember=%s)"+
-			"(memberUid=%s)"+
-			"(member:1.2.840.113556.1.4.1941:=%s)"+
-			")", ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), ldap.EscapeFilter(entry.DN))
 
 		LoggerDEBUG.Printf("Searching Group: '%s' with User: '%s'", g, entry.DN)
 
@@ -339,7 +354,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			0,
 			0,
 			false,
-			group_filter,
+			group_filter.String(),
 			[]string{"member", "uniqueMember", "memberUid"},
 			nil,
 		)
