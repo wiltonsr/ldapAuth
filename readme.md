@@ -282,6 +282,12 @@ _Optional, Default: `""`_
 
 The name of the realm to specify in the `WWW-Authenticate` header. This option is ineffective unless the `wwwAuthenticateHeader` option is set to true.
 
+##### `enableNestedGroupFilter`
+
+_Optional, Default: `false`_
+
+If you need to search the user's nested group and the `LDAP` server support to [search for LDAP_MATCHING_RULE_IN_CHAIN groups](https://ldapwiki.com/wiki/Wiki.jsp?page=LDAP_MATCHING_RULE_IN_CHAIN), you can enabled it by settings this parameter to `true`, it is disabled by default.
+
 ##### `allowedGroups`
 Needs `traefik` >= [`v2.8.2`](https://github.com/traefik/traefik/releases/tag/v2.8.2)
 
