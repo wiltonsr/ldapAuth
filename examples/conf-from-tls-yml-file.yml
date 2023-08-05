@@ -20,7 +20,7 @@ services:
       # ===============================================================================#
       # Load ldapAuth Dynamic conf from file ==========================================#
       # https://doc.traefik.io/traefik/providers/file/#filename                        #
-      - "--providers.file.filename=/dynamic-conf/ldapAuth-conf.toml"                   #
+      - "--providers.file.filename=/dynamic-conf/ldapAuth-tls-conf.yml"                    #
       # ===============================================================================#
     ports:
       - "80:80"
@@ -28,7 +28,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "../../ldapAuth:/plugins-local/src/github.com/wiltonsr/ldapAuth:ro"
-      - "./dynamic-conf/ldapAuth-conf.toml:/dynamic-conf/ldapAuth-conf.toml:ro"
+      - "./dynamic-conf/ldapAuth-tls-conf.yml:/dynamic-conf/ldapAuth-tls-conf.yml:ro"
 
   whoami:
     image: "traefik/whoami"
@@ -36,5 +36,5 @@ services:
     labels:
       - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
       - "traefik.http.routers.whoami.entrypoints=web"
-      # Enable LDAP Auth Middleware defined in ldapAuth-conf.toml
+      # Enable LDAP Auth Middleware defined in ldapAuth-tls-conf.yml
       - "traefik.http.routers.whoami.middlewares=my-ldapAuth@file"
