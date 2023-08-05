@@ -39,31 +39,31 @@ var (
 type Config struct {
 	Enabled                    bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
-	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
-	CacheTimeout               uint32   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
-	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
-	CacheCookiePath            string   `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
-	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
-	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
-	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
-	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
-	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
-	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
-	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
-	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
-	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                     string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
-	BindPassword               string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername            bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader      string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization       bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
-	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
-	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
-	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
-	EnableNestedGroupFilter    bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
-	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
-	AllowedUsers               []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
+	URL                        string   `json:"url,omitempty" yaml:"url,omitempty" la_conf:"la_url"`
+	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty" la_conf:"la_port"`
+	CacheTimeout               uint32   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty" la_conf:"la_cache_timeout"`
+	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty" la_conf:"la_cache_cookie_name"`
+	CacheCookiePath            string   `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty" la_conf:"la_cache_cookie_path"`
+	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty" la_conf:"la_cache_cookie_secure"`
+	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty" la_conf:"la_cache_key"`
+	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty" la_conf:"la_use_tls"`
+	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty" la_conf:"la_start_tls"`
+	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty" la_conf:"la_certificate_authority"`
+	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty" la_conf:"la_insecure_skip_verify"`
+	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty" la_conf:"la_attribute"`
+	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty" la_conf:"la_search_filter"`
+	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty" la_conf:"la_base_dn"`
+	BindDN                     string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty" la_conf:"la_bind_dn"`
+	BindPassword               string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty" la_conf:"la_bind_password"`
+	ForwardUsername            bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty" la_conf:"la_forward_username"`
+	ForwardUsernameHeader      string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty" la_conf:"la_forward_user_name_header"`
+	ForwardAuthorization       bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty" la_conf:"la_forward_authorization"`
+	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty" la_conf:"la_forward_extra_ldap_headers"`
+	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty" la_conf:"la_www_authenticate_header"`
+	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty" la_conf:"la_www_authenticate_header_realm"`
+	EnableNestedGroupFilter    bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty" la_conf:"la_enable_nested_groups_filter"`
+	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty" la_conf:"la_allowed_groups"`
+	AllowedUsers               []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty" la_conf:"la_allowed_users"`
 	Username                   string
 }
 
@@ -114,6 +114,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	LoggerINFO.Printf("Starting %s Middleware...", name)
 
+	parseConfigParams(config)
 	LogConfigParams(config)
 
 	// Create new session with CacheKey and CacheTimeout.
@@ -571,4 +572,55 @@ func LogConfigParams(config *Config) {
 	for i := 0; i < v.NumField(); i++ {
 		LoggerDEBUG.Printf(fmt.Sprint(typeOfS.Field(i).Name, " => '", v.Field(i).Interface(), "'"))
 	}
+}
+
+func parseConfigParams(config *Config) {
+	/*
+		Make this to prevent error msg
+		"Error in Go routine: reflect: call of reflect.Value.NumField on ptr Value"
+	*/
+	c := *config
+
+	v := reflect.ValueOf(c)
+	typeOfS := v.Type()
+	t := reflect.TypeOf(Config{})
+
+	for i := 0; i < v.NumField(); i++ {
+		f, _ := t.FieldByName(typeOfS.Field(i).Name)
+		k, _ := f.Tag.Lookup("la_conf")
+
+		if k == "" {
+			continue
+		}
+
+		LoggerDEBUG.Printf("Looking for Environment variables '%v'", strings.ToUpper(k))
+		if v, ok := os.LookupEnv(strings.ToUpper(k)); ok {
+			LoggerDEBUG.Printf("Conf %v='%v' loaded from Environment variables!", typeOfS.Field(i).Name, v)
+			// TO DO - Set value to config
+			continue
+		}
+
+		LoggerDEBUG.Printf("Looking for Docker secret '/run/secrets/%v'", strings.ToLower(k))
+		b, err := os.ReadFile(fmt.Sprintf("/run/secrets/%s", strings.ToLower(k)))
+
+		if err == nil {
+			LoggerDEBUG.Printf("Conf %v='%v' loaded from Docker secret '/run/secrets/%v'!", typeOfS.Field(i).Name, b, strings.ToLower(k))
+			// TO DO - Set value to config
+			continue
+		}
+
+		// switch typeOfS.Field(i).Type.Kind() {
+		// case reflect.Bool:
+		// 	reflect.ValueOf(&c).Elem().FieldByName(typeOfS.Field(i).Name).SetBool(false)
+		// case reflect.String:
+		// 	reflect.ValueOf(&c).Elem().FieldByName(typeOfS.Field(i).Name).SetString("teste")
+		// }
+
+		// LoggerDEBUG.Printf("%v", reflect.TypeOf(typeOfS.Field(i)).Key().Kind())
+		// LoggerDEBUG.Printf("%v", typeOfS.Key().Kind())
+		// LoggerDEBUG.Printf("%v", typeOfS.Field(i).Type.Kind())
+		// LoggerDEBUG.Printf(fmt.Sprint(typeOfS.Field(i).Name, " => '", v.Field(i).Interface(), "'"))
+	}
+
+	*config = c
 }
