@@ -46,7 +46,6 @@ type Config struct {
 	CacheCookiePath            string   `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
 	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
 	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
-	UseTLS                     bool     `json:"useTls,omitempty" yaml:"useTls,omitempty"`
 	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
 	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
 	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
@@ -79,7 +78,6 @@ func CreateConfig() *Config {
 		CacheCookiePath:            "",
 		CacheCookieSecure:          false,
 		CacheKey:                   "super-secret-key",
-		UseTLS:                     false,
 		StartTLS:                   false,
 		CertificateAuthority:       "",
 		InsecureSkipVerify:         false,
@@ -180,7 +178,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		certPool.AppendCertsFromPEM([]byte(la.config.CertificateAuthority))
 	}
 
-	conn, err := Connect(la.config.URL, la.config.Port, la.config.UseTLS, la.config.StartTLS, la.config.InsecureSkipVerify, certPool)
+	conn, err := Connect(la.config.URL, la.config.Port, la.config.StartTLS, la.config.InsecureSkipVerify, certPool)
 	if err != nil {
 		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, la.config, err)
@@ -399,11 +397,11 @@ func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err .
 }
 
 // Connect return a LDAP Connection.
-func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bool, ca *x509.CertPool) (*ldap.Conn, error) {
+func Connect(addr string, port uint16, startTLS bool, skipVerify bool, ca *x509.CertPool) (*ldap.Conn, error) {
 	var conn *ldap.Conn = nil
 	var err error = nil
-	u, err := url.Parse(addr)
 
+	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -413,57 +411,31 @@ func Connect(addr string, port uint16, useTLS bool, startTLS bool, skipVerify bo
 		// we assume that error is due to missing port.
 		host = u.Host
 	}
-	LoggerDEBUG.Printf("Host: %s ", host)
 
-	address := net.JoinHostPort(host, strconv.FormatUint(uint64(port), 10))
+	address := u.Scheme + "://" + net.JoinHostPort(host, strconv.FormatUint(uint64(port), 10))
+	LoggerDEBUG.Printf("Connect Address: '%s'", address)
 
-	LoggerDEBUG.Printf("Connect Address: %s ", address)
+	tlsCfg := &tls.Config{
+		InsecureSkipVerify: skipVerify,
+		ServerName:         host,
+		RootCAs:            ca,
+	}
 
-	if useTLS {
-		tlsCfg := &tls.Config{
-			InsecureSkipVerify: skipVerify,
-			ServerName:         host,
-			RootCAs:            ca,
+	if u.Scheme == "ldap" && startTLS {
+		conn, err = ldap.DialURL(address)
+		if err == nil {
+			err = conn.StartTLS(tlsCfg)
 		}
-		if startTLS {
-			conn, err = dial("tcp", address)
-			if err == nil {
-				err = conn.StartTLS(tlsCfg)
-			}
-		} else {
-			conn, err = dialTLS("tcp", address, tlsCfg)
-		}
+	} else if u.Scheme == "ldaps" {
+		conn, err = ldap.DialURL(address, ldap.DialWithTLSConfig(tlsCfg))
 	} else {
-		conn, err = dial("tcp", address)
+		conn, err = ldap.DialURL(address)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	return conn, nil
-
-}
-
-// dial applies connects to the given address on the given network using net.Dial.
-func dial(network, addr string) (*ldap.Conn, error) {
-	c, err := net.Dial(network, addr)
-	if err != nil {
-		return nil, err
-	}
-	conn := ldap.NewConn(c, false)
-	conn.Start()
-	return conn, nil
-}
-
-// dialTLS connects to the given address on the given network using tls.Dial.
-func dialTLS(network, addr string, config *tls.Config) (*ldap.Conn, error) {
-	c, err := tls.Dial(network, addr, config)
-	if err != nil {
-		return nil, err
-	}
-	conn := ldap.NewConn(c, true)
-	conn.Start()
 	return conn, nil
 }
 

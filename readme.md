@@ -162,15 +162,10 @@ _Optional, Default: `super-secret-key`_
 
 The key used to encrypt session cookie information. You `must` use a strong value here.
 
-##### `useTLS`
-_Optional, Default: `false`_
-
-Set to true if LDAP server should use an encrypted TLS connection, either with STARTTLS or LDAPS.
-
 ##### `startTLS`
 _Optional, Default: `false`_
 
-If set to true, instruct `ldapAuth` to issue a `StartTLS` request when initializing the connection with the LDAP server. This is not used if the `useTLS` option is set to `false`.
+If set to true, instruct `ldapAuth` to issue a `StartTLS` request when initializing the connection with the LDAP server.
 
 ##### `certificateAuthority`
 _Optional, Default: `""`_
@@ -199,7 +194,7 @@ Example:
 ##### `insecureSkipVerify`
 _Optional, Default: `false`_
 
-When `useTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
+When connecting to a `ldaps` server or `startTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
 
 ##### `attribute`
 
