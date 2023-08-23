@@ -26,6 +26,8 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+const defaultCacheKey = "super-secret-key"
+
 // nolint
 var (
 	store *sessions.CookieStore
@@ -97,7 +99,7 @@ func CreateConfig() *Config {
 		CacheCookieName:            "ldapAuth_session_token",
 		CacheCookiePath:            "",
 		CacheCookieSecure:          false,
-		CacheKey:                   "super-secret-key",
+		CacheKey:                   defaultCacheKey,
 		CacheKeyLabel:              "LDAP_AUTH_CACHE_KEY",
 		StartTLS:                   false,
 		CertificateAuthority:       "",
@@ -162,19 +164,16 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	logConfigParams(config)
 	if config.BindDN != "" && config.BindPassword == "" {
-		bindPasswordLabel := "LDAP_AUTH_BIND_PASSWORD"
-		if config.BindPasswordLabel != "" {
-			bindPasswordLabel = config.BindPasswordLabel
-		}
-		config.BindPassword = getSecret(bindPasswordLabel)
+		config.BindPassword = getSecret(config.BindPasswordLabel)
 	}
 
-	if config.CacheKey != "" {
-		cacheKeyLabel := "LDAP_AUTH_CACHE_KEY"
-		if config.CacheKeyLabel != "" {
-			cacheKeyLabel = config.CacheKeyLabel
+	// if CacheKey is the default value we try to set it from secret
+	if config.CacheKey == defaultCacheKey {
+		cacheKey := getSecret(config.CacheKeyLabel)
+		// we could not retrieve the secret, so we keep the default value
+		if cacheKey != "" {
+			config.CacheKey = cacheKey
 		}
-		config.CacheKey = getSecret(cacheKeyLabel)
 	}
 
 	logConfigParams(config)
