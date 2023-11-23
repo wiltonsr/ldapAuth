@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"text/template"
 	"io/ioutil"
 	"log"
 	"net"
@@ -19,6 +18,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/gorilla/sessions"
@@ -241,6 +241,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	if config.SearchFilter == "" {
 		LoggerDEBUG.Printf("Running in Bind Mode")
 		userDN := fmt.Sprintf("%s=%s,%s", config.Attribute, username, config.BaseDN)
+		userDN = strings.Trim(userDN, ",")
 		LoggerDEBUG.Printf("Authenticating User: %s", userDN)
 		err := conn.Bind(userDN, password)
 		return err == nil, ldap.NewEntry(userDN, nil), err
