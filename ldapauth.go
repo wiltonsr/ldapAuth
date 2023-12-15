@@ -156,7 +156,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if auth, ok := session.Values["authenticated"].(bool); ok && auth {
 		if session.Values["username"] == username {
 			LoggerDEBUG.Printf("Session token Valid! Passing request...")
-			la.next.ServeHTTP(rw, req)
+			ServeAuthenicated(la, session, rw, req)
 			return
 		}
 		err = errors.New(fmt.Sprintf("Session user: '%s' != Auth user: '%s'. Please, reauthenticate", session.Values["username"], username))
@@ -209,17 +209,25 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Set user as authenticated.
 	session.Values["username"] = username
+	session.Values["ldap-dn"] = entry.DN
+	session.Values["ldap-cn"] = entry.GetAttributeValue("cn")
 	session.Values["authenticated"] = true
 	session.Save(req, rw)
 
+	ServeAuthenicated(la, session, rw, req)
+}
+
+func ServeAuthenicated(la *LdapAuth, session *sessions.Session, rw http.ResponseWriter, req *http.Request) {
 	// Sanitize Some Headers Infos.
 	if la.config.ForwardUsername {
+		username := session.Values["username"].(string)
+
 		req.URL.User = url.User(username)
 		req.Header[la.config.ForwardUsernameHeader] = []string{username}
 
 		if la.config.ForwardExtraLdapHeaders && la.config.SearchFilter != "" {
-			userDN := entry.DN
-			userCN := entry.GetAttributeValue("cn")
+			userDN := session.Values["ldap-dn"].(string)
+			userCN := session.Values["ldap-cn"].(string)
 			req.Header["Ldap-Extra-Attr-DN"] = []string{userDN}
 			req.Header["Ldap-Extra-Attr-CN"] = []string{userCN}
 		}
