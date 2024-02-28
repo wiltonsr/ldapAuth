@@ -156,6 +156,13 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if auth, ok := session.Values["authenticated"].(bool); ok && auth {
 		if session.Values["username"] == username {
 			LoggerDEBUG.Printf("Session token Valid! Passing request...")
+			
+			// also pass request username if configured to do so
+			if la.config.ForwardUsername {
+				req.URL.User = url.User(username)
+				req.Header[la.config.ForwardUsernameHeader] = []string{username}
+			}
+
 			la.next.ServeHTTP(rw, req)
 			return
 		}
