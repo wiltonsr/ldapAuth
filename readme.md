@@ -167,6 +167,25 @@ _Optional, Default: `false`_
 
 If set to true, instruct `ldapAuth` to issue a `StartTLS` request when initializing the connection with the LDAP server.
 
+##### `insecureSkipVerify`
+_Optional, Default: `false`_
+
+When connecting to a `ldaps` server or `startTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
+
+##### `minVersionTLS`
+_Optional, Default: `tls.VersionTLS12`_
+
+Contains the minimum TLS version that is acceptable. By default, `TLS 1.2` is currently used as the minimum. `TLS 1.0` is the minimum supported by this package.
+
+This option value must match [crypto/tls](https://pkg.go.dev/crypto/tls#pkg-constants) versions constants.
+
+##### `maxVersionTLS`
+_Optional, Default: `tls.VersionTLS13`_
+
+Contains the maximum TLS version that is acceptable. By default, the maximum version supported by this package is used, which is currently `TLS 1.3`.
+
+This option value must match [crypto/tls](https://pkg.go.dev/crypto/tls#pkg-constants) versions constants.
+
 ##### `certificateAuthority`
 _Optional, Default: `""`_
 
@@ -190,11 +209,6 @@ Example:
         98TwDIK/39WEB/V607As+KoYazQG8drorw==
         -----END CERTIFICATE-----
 ```
-
-##### `insecureSkipVerify`
-_Optional, Default: `false`_
-
-When connecting to a `ldaps` server or `startTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
 
 ##### `attribute`
 

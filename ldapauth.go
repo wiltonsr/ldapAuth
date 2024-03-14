@@ -47,8 +47,10 @@ type Config struct {
 	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
 	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
 	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
-	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
 	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	MinVersionTLS              string   `json:"minVersionTls,omitempty" yaml:"minVersionTls,omitempty"`
+	MaxVersionTLS              string   `json:"maxVersionTls,omitempty" yaml:"maxVersionTls,omitempty"`
+	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
 	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
 	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
 	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
@@ -79,8 +81,10 @@ func CreateConfig() *Config {
 		CacheCookieSecure:          false,
 		CacheKey:                   "super-secret-key",
 		StartTLS:                   false,
-		CertificateAuthority:       "",
 		InsecureSkipVerify:         false,
+		MinVersionTLS:              "tls.VersionTLS12",
+		MaxVersionTLS:              "tls.VersionTLS13",
+		CertificateAuthority:       "",
 		Attribute:                  "cn", // Usually uid or sAMAccountname
 		SearchFilter:               "",
 		BaseDN:                     "",
@@ -159,7 +163,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			ServeAuthenicated(la, session, rw, req)
 			return
 		}
-		err = errors.New(fmt.Sprintf("Session user: '%s' != Auth user: '%s'. Please, reauthenticate", session.Values["username"], username))
+		err = fmt.Errorf("session user: '%s' != Auth user: '%s'. Please, reauthenticate", session.Values["username"], username)
 		// Invalidate session.
 		session.Values["authenticated"] = false
 		session.Values["username"] = username
@@ -178,7 +182,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		certPool.AppendCertsFromPEM([]byte(la.config.CertificateAuthority))
 	}
 
-	conn, err := Connect(la.config.URL, la.config.Port, la.config.StartTLS, la.config.InsecureSkipVerify, certPool)
+	conn, err := Connect(la.config)
 	if err != nil {
 		LoggerERROR.Printf("%s", err)
 		RequireAuth(rw, req, la.config, err)
@@ -406,11 +410,17 @@ func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err .
 }
 
 // Connect return a LDAP Connection.
-func Connect(addr string, port uint16, startTLS bool, skipVerify bool, ca *x509.CertPool) (*ldap.Conn, error) {
+func Connect(config *Config) (*ldap.Conn, error) {
 	var conn *ldap.Conn = nil
+	var certPool *x509.CertPool
 	var err error = nil
 
-	u, err := url.Parse(addr)
+	if config.CertificateAuthority != "" {
+		certPool = x509.NewCertPool()
+		certPool.AppendCertsFromPEM([]byte(config.CertificateAuthority))
+	}
+
+	u, err := url.Parse(config.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -421,16 +431,18 @@ func Connect(addr string, port uint16, startTLS bool, skipVerify bool, ca *x509.
 		host = u.Host
 	}
 
-	address := u.Scheme + "://" + net.JoinHostPort(host, strconv.FormatUint(uint64(port), 10))
+	address := u.Scheme + "://" + net.JoinHostPort(host, strconv.FormatUint(uint64(config.Port), 10))
 	LoggerDEBUG.Printf("Connect Address: '%s'", address)
 
 	tlsCfg := &tls.Config{
-		InsecureSkipVerify: skipVerify,
+		InsecureSkipVerify: config.InsecureSkipVerify,
 		ServerName:         host,
-		RootCAs:            ca,
+		RootCAs:            certPool,
+		MinVersion:         parseTlsVersion(config.MinVersionTLS),
+		MaxVersion:         parseTlsVersion(config.MaxVersionTLS),
 	}
 
-	if u.Scheme == "ldap" && startTLS {
+	if u.Scheme == "ldap" && config.StartTLS {
 		conn, err = ldap.DialURL(address)
 		if err == nil {
 			err = conn.StartTLS(tlsCfg)
@@ -535,6 +547,23 @@ func SetLogger(level string) {
 	default:
 		LoggerERROR.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
+	}
+}
+
+func parseTlsVersion(version string) uint16 {
+	switch version {
+	case "tls.VersionTLS10", "VersionTLS10":
+		return tls.VersionTLS10
+	case "tls.VersionTLS11", "VersionTLS11":
+		return tls.VersionTLS11
+	case "tls.VersionTLS12", "VersionTLS12":
+		return tls.VersionTLS12
+	case "tls.VersionTLS13", "VersionTLS13":
+		return tls.VersionTLS13
+	default:
+		LoggerINFO.Printf("Version: '%s' doesnt match any value. Using 'tls.VersionTLS10' instead", version)
+		LoggerINFO.Printf("Please check https://pkg.go.dev/crypto/tls#pkg-constants to a list of valid versions")
+		return tls.VersionTLS10
 	}
 }
 
