@@ -175,13 +175,6 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	LoggerDEBUG.Println("No session found! Trying to authenticate in LDAP")
 
-	var certPool *x509.CertPool
-
-	if la.config.CertificateAuthority != "" {
-		certPool = x509.NewCertPool()
-		certPool.AppendCertsFromPEM([]byte(la.config.CertificateAuthority))
-	}
-
 	conn, err := Connect(la.config)
 	if err != nil {
 		LoggerERROR.Printf("%s", err)
