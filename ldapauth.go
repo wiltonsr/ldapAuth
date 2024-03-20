@@ -263,8 +263,13 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 	userDN := result.Entries[0].DN
 	LoggerINFO.Printf("Authenticating User: %s", userDN)
 
+	// Create a new conn to validate user password. This prevents changing the bind made
+	// previously, then LdapCheckUserAuthorized will use same operation mode
+	_nconn, _ := Connect(config)
+	defer _nconn.Close()
+
 	// Bind User and password.
-	err = conn.Bind(userDN, password)
+	err = _nconn.Bind(userDN, password)
 	return err == nil, result.Entries[0], err
 }
 
@@ -346,6 +351,13 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 		}{ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), config.EnableNestedGroupFilter})
 
 	LoggerDEBUG.Printf("Group Filter: '%s'", group_filter.String())
+
+	res, err := conn.WhoAmI(nil)
+	if err != nil {
+		LoggerERROR.Printf("Failed to call WhoAmI(): %s", err)
+	} else {
+		LoggerDEBUG.Printf("Using credential: '%s' for Search Groups", res.AuthzID)
+	}
 
 	for _, g := range config.AllowedGroups {
 

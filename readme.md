@@ -101,6 +101,8 @@ labels:
 
 ## Operations Mode
 
+The `Operation Mode` detected will be used to perform all subsequent requests.
+
 ### Bind Mode
 
 If no `searchFilter` is specified in its configuration, the middleware runs in the default bind mode, meaning it tries to make a simple bind request to the LDAP server with the credentials provided in the request headers. If the bind succeeds, the middleware forwards the request, otherwise, it returns a 401 Unauthorized status code.
