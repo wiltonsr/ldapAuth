@@ -1,0 +1,92 @@
+name: Bug Report
+description: Create a report to help us improve
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Make sure to browse the opened and closed issues before submit your issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the problem
+      description: Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: "Provide the configuration used"
+      placeholder: |
+        http:
+          middlewares:
+            my-ldapAuth:
+              plugin:
+                ldapAuth:
+                  Enabled: true
+                  LogLevel: "DEBUG"
+                  Url: "ldap://ldap.forumsys.com"
+                  Port: 389
+                  BaseDN: "dc=example,dc=com"
+                  BindDN: "uid=tesla,dc=example,dc=com"
+                  BindPassword: "password"
+                  Attribute: "uid"
+                  AllowedGroups:
+                    - ou=mathematicians,dc=example,dc=com
+                    - ou=italians,ou=scientists,dc=example,dc=com
+                  AllowedUsers:
+                    - euler
+                    - uid=euclid,dc=example,dc=com
+                  SearchFilter: (\{\{.Attribute\}\}=\{\{.Username\}\})
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Provide the DEBUG logs"
+      placeholder: |
+        time="2024-03-20T15:18:17Z" level=info msg="Configuration loaded from flags."
+        INFO: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: Starting my-ldapAuth@file Middleware...
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: Enabled => 'true'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: LogLevel => 'DEBUG'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: URL => 'ldap://ldap.forumsys.com'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: Port => '389'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CacheTimeout => '300'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CacheCookieName => 'ldapAuth_session_token'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CacheCookiePath => ''
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CacheCookieSecure => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CacheKey => 'super-secret-key'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: StartTLS => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: InsecureSkipVerify => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: MinVersionTLS => 'tls.VersionTLS12'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: MaxVersionTLS => 'tls.VersionTLS13'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: CertificateAuthority => ''
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: Attribute => 'uid'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: SearchFilter => '(\{\{.Attribute\}\}=\{\{.Username\}\})'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: BaseDN => 'dc=example,dc=com'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: BindDN => 'uid=tesla,dc=example,dc=com'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: BindPassword => 'password'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: ForwardUsername => 'true'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: ForwardUsernameHeader => 'Username'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: ForwardAuthorization => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: ForwardExtraLdapHeaders => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: WWWAuthenticateHeader => 'true'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: WWWAuthenticateHeaderRealm => ''
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: EnableNestedGroupFilter => 'false'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: AllowedGroups => '[ou=mathematicians,dc=example,dc=com ou=italians,ou=scientists,dc=example,dc=com]'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: AllowedUsers => '[euler uid=euclid,dc=example,dc=com]'
+        DEBUG: ldapAuth: 2024/03/20 15:18:18 restricted.go:51: Username => ''
+      render: console
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: ldapAuth Version
+    validations:
+      required: true
