@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -31,41 +32,64 @@ var (
 	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerINFO level.
 	LoggerINFO = log.New(ioutil.Discard, "INFO: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// LoggerWARNING level.
+	LoggerWARNING = log.New(ioutil.Discard, "WARNING: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerERROR level.
 	LoggerERROR = log.New(ioutil.Discard, "ERROR: ldapAuth: ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
+type LdapServerConfig struct {
+	URL                     string   `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                    uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	Weight                  uint16   `json:"weight,omitempty" yaml:"weight,omitempty"`
+	StartTLS                bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
+	InsecureSkipVerify      bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	MinVersionTLS           string   `json:"minVersionTls,omitempty" yaml:"minVersionTls,omitempty"`
+	MaxVersionTLS           string   `json:"maxVersionTls,omitempty" yaml:"maxVersionTls,omitempty"`
+	CertificateAuthority    string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
+	Attribute               string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter            string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                  string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                  string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
+	BindPassword            string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	EnableNestedGroupFilter bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
+	AllowedGroups           []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
+	AllowedUsers            []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
+}
+
 // Config the plugin configuration.
 type Config struct {
-	Enabled                    bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	LogLevel                   string   `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
-	URL                        string   `json:"url,omitempty" yaml:"url,omitempty"`
-	Port                       uint16   `json:"port,omitempty" yaml:"port,omitempty"`
-	CacheTimeout               uint32   `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
-	CacheCookieName            string   `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
-	CacheCookiePath            string   `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
-	CacheCookieSecure          bool     `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
-	CacheKey                   string   `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
-	StartTLS                   bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
-	InsecureSkipVerify         bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
-	MinVersionTLS              string   `json:"minVersionTls,omitempty" yaml:"minVersionTls,omitempty"`
-	MaxVersionTLS              string   `json:"maxVersionTls,omitempty" yaml:"maxVersionTls,omitempty"`
-	CertificateAuthority       string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
-	Attribute                  string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
-	SearchFilter               string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
-	BaseDN                     string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
-	BindDN                     string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
-	BindPassword               string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
-	ForwardUsername            bool     `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
-	ForwardUsernameHeader      string   `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
-	ForwardAuthorization       bool     `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
-	ForwardExtraLdapHeaders    bool     `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
-	WWWAuthenticateHeader      bool     `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
-	WWWAuthenticateHeaderRealm string   `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
-	EnableNestedGroupFilter    bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
-	AllowedGroups              []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
-	AllowedUsers               []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
+	Enabled                    bool               `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	LogLevel                   string             `json:"logLevel,omitempty" yaml:"logLevel,omitempty"`
+	ServerList                 []LdapServerConfig `json:"serverList,omitempty" yaml:"serverList,omitempty"`
+	CacheTimeout               uint32             `json:"cacheTimeout,omitempty" yaml:"cacheTimeout,omitempty"`
+	CacheCookieName            string             `json:"cacheCookieName,omitempty" yaml:"cacheCookieName,omitempty"`
+	CacheCookiePath            string             `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
+	CacheCookieSecure          bool               `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
+	CacheKey                   string             `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
+	ForwardUsername            bool               `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
+	ForwardUsernameHeader      string             `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+	ForwardAuthorization       bool               `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
+	ForwardExtraLdapHeaders    bool               `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
+	WWWAuthenticateHeader      bool               `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
+	WWWAuthenticateHeaderRealm string             `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
 	Username                   string
+	// params below are deprecated use 'ServerList' instead
+	URL                     string   `json:"url,omitempty" yaml:"url,omitempty"`
+	Port                    uint16   `json:"port,omitempty" yaml:"port,omitempty"`
+	StartTLS                bool     `json:"startTls,omitempty" yaml:"startTls,omitempty"`
+	InsecureSkipVerify      bool     `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	MinVersionTLS           string   `json:"minVersionTls,omitempty" yaml:"minVersionTls,omitempty"`
+	MaxVersionTLS           string   `json:"maxVersionTls,omitempty" yaml:"maxVersionTls,omitempty"`
+	CertificateAuthority    string   `json:"certificateAuthority,omitempty" yaml:"certificateAuthority,omitempty"`
+	Attribute               string   `json:"attribute,omitempty" yaml:"attribute,omitempty"`
+	SearchFilter            string   `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
+	BaseDN                  string   `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
+	BindDN                  string   `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
+	BindPassword            string   `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	EnableNestedGroupFilter bool     `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
+	AllowedGroups           []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
+	AllowedUsers            []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -73,33 +97,21 @@ func CreateConfig() *Config {
 	return &Config{
 		Enabled:                    true,
 		LogLevel:                   "INFO",
-		URL:                        "",  // Supports: ldap://, ldaps://
-		Port:                       389, // Usually 389 or 636
+		ServerList:                 []LdapServerConfig{},
 		CacheTimeout:               300, // In seconds, default to 5m
 		CacheCookieName:            "ldapAuth_session_token",
 		CacheCookiePath:            "",
 		CacheCookieSecure:          false,
 		CacheKey:                   "super-secret-key",
-		StartTLS:                   false,
-		InsecureSkipVerify:         false,
-		MinVersionTLS:              "tls.VersionTLS12",
-		MaxVersionTLS:              "tls.VersionTLS13",
-		CertificateAuthority:       "",
-		Attribute:                  "cn", // Usually uid or sAMAccountname
-		SearchFilter:               "",
-		BaseDN:                     "",
-		BindDN:                     "",
-		BindPassword:               "",
 		ForwardUsername:            true,
 		ForwardUsernameHeader:      "Username",
 		ForwardAuthorization:       false,
 		ForwardExtraLdapHeaders:    false,
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
-		EnableNestedGroupFilter:    false,
-		AllowedGroups:              nil,
-		AllowedUsers:               nil,
 		Username:                   "",
+		// deprecated use 'ServerList' instead
+		URL: "",
 	}
 }
 
@@ -115,6 +127,36 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	SetLogger(config.LogLevel)
 
 	LoggerINFO.Printf("Starting %s Middleware...", name)
+
+	// It means the user is passing the URL directly
+	if config.URL != "" {
+		LoggerWARNING.Printf("Passing LDAP Server Attributes directly is deprecated, please use 'ServerList' instead")
+		server := LdapServerConfig{
+			URL:                     config.URL,
+			Port:                    config.Port,
+			Weight:                  1,
+			StartTLS:                config.StartTLS,
+			InsecureSkipVerify:      config.InsecureSkipVerify,
+			MinVersionTLS:           config.MinVersionTLS,
+			MaxVersionTLS:           config.MaxVersionTLS,
+			CertificateAuthority:    config.CertificateAuthority,
+			Attribute:               config.Attribute,
+			SearchFilter:            config.SearchFilter,
+			BaseDN:                  config.BaseDN,
+			BindDN:                  config.BindDN,
+			BindPassword:            config.BindPassword,
+			EnableNestedGroupFilter: config.EnableNestedGroupFilter,
+			AllowedGroups:           config.AllowedGroups,
+			AllowedUsers:            config.AllowedUsers,
+		}
+
+		config.ServerList = append(config.ServerList, server)
+	}
+
+	// Rank LDAP servers based on weight. Higher weight, higher precedence
+	sort.Slice(config.ServerList, func(i, j int) bool {
+		return config.ServerList[i].Weight > config.ServerList[j].Weight
+	})
 
 	LogConfigParams(config)
 
@@ -175,14 +217,30 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	LoggerDEBUG.Println("No session found! Trying to authenticate in LDAP")
 
-	conn, err := Connect(la.config)
-	if err != nil {
-		LoggerERROR.Printf("%s", err)
-		RequireAuth(rw, req, la.config, err)
-		return
+	var conn *ldap.Conn = nil
+	var serverInUse LdapServerConfig
+	errStrings := []string{"All servers in ServerList are down"}
+
+	for i, server := range la.config.ServerList {
+		attempt := fmt.Sprintf("Attempt %d/%d", i+1, len(la.config.ServerList))
+		LoggerDEBUG.Printf(attempt)
+
+		if conn, err = Connect(server); err == nil {
+			serverInUse = server
+			break
+		}
+
+		LoggerERROR.Printf("%v", err)
+		errStrings = append(errStrings, fmt.Sprintf("%s: %v", attempt, err))
+
+		if i == len(la.config.ServerList)-1 {
+			err = fmt.Errorf(strings.Join(errStrings, "\n"))
+			RequireAuth(rw, req, la.config, err)
+			return
+		}
 	}
 
-	isValidUser, entry, err := LdapCheckUser(conn, la.config, username, password)
+	isValidUser, entry, err := LdapCheckUser(conn, serverInUse, username, password)
 
 	if !isValidUser {
 		defer conn.Close()
@@ -192,7 +250,7 @@ func (la *LdapAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	isAuthorized, err := LdapCheckUserAuthorized(conn, la.config, entry, username)
+	isAuthorized, err := LdapCheckUserAuthorized(conn, serverInUse, entry, username)
 	if !isAuthorized {
 		defer conn.Close()
 		LoggerERROR.Printf("%s", err)
@@ -242,7 +300,7 @@ func ServeAuthenicated(la *LdapAuth, session *sessions.Session, rw http.Response
 }
 
 // LdapCheckUser check if user and password are correct.
-func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (bool, *ldap.Entry, error) {
+func LdapCheckUser(conn *ldap.Conn, config LdapServerConfig, username, password string) (bool, *ldap.Entry, error) {
 	if config.SearchFilter == "" {
 		LoggerDEBUG.Printf("Running in Bind Mode")
 		userDN := fmt.Sprintf("%s=%s,%s", config.Attribute, username, config.BaseDN)
@@ -274,7 +332,7 @@ func LdapCheckUser(conn *ldap.Conn, config *Config, username, password string) (
 }
 
 // LdapCheckUserAuthorized check if user is authorized post-authentication
-func LdapCheckUserAuthorized(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) (bool, error) {
+func LdapCheckUserAuthorized(conn *ldap.Conn, config LdapServerConfig, entry *ldap.Entry, username string) (bool, error) {
 	// Check if authorization is required or simply authentication
 	if len(config.AllowedUsers) == 0 && len(config.AllowedGroups) == 0 {
 		LoggerDEBUG.Printf("No authorization requirements")
@@ -304,7 +362,7 @@ func LdapCheckUserAuthorized(conn *ldap.Conn, config *Config, entry *ldap.Entry,
 }
 
 // LdapCheckAllowedUsers check if user is explicitly allowed in AllowedUsers list
-func LdapCheckAllowedUsers(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) bool {
+func LdapCheckAllowedUsers(conn *ldap.Conn, config LdapServerConfig, entry *ldap.Entry, username string) bool {
 	if len(config.AllowedUsers) == 0 {
 		return false
 	}
@@ -323,7 +381,7 @@ func LdapCheckAllowedUsers(conn *ldap.Conn, config *Config, entry *ldap.Entry, u
 }
 
 // LdapCheckUserGroups check if the is user is a member of any of the AllowedGroups list
-func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, username string) (bool, error) {
+func LdapCheckUserGroups(conn *ldap.Conn, config LdapServerConfig, entry *ldap.Entry, username string) (bool, error) {
 
 	if len(config.AllowedGroups) == 0 {
 		return false, nil
@@ -397,7 +455,7 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 }
 
 // RequireAuth set Auth request.
-func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err ...error) {
+func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err error) {
 	LoggerDEBUG.Println(err)
 	w.Header().Set("Content-Type", "text/plain")
 	if config.WWWAuthenticateHeader {
@@ -410,12 +468,12 @@ func RequireAuth(w http.ResponseWriter, req *http.Request, config *Config, err .
 
 	w.WriteHeader(http.StatusUnauthorized)
 
-	errMsg := strings.Trim(err[0].Error(), "\x00")
+	errMsg := strings.Trim(err.Error(), "\x00")
 	_, _ = w.Write([]byte(fmt.Sprintf("%d %s\nError: %s\n", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), errMsg)))
 }
 
 // Connect return a LDAP Connection.
-func Connect(config *Config) (*ldap.Conn, error) {
+func Connect(config LdapServerConfig) (*ldap.Conn, error) {
 	var conn *ldap.Conn = nil
 	var certPool *x509.CertPool
 	var err error = nil
@@ -466,7 +524,7 @@ func Connect(config *Config) (*ldap.Conn, error) {
 }
 
 // SearchMode make search to LDAP and return results.
-func SearchMode(conn *ldap.Conn, config *Config) (*ldap.SearchResult, error) {
+func SearchMode(conn *ldap.Conn, config LdapServerConfig) (*ldap.SearchResult, error) {
 	if config.BindDN != "" && config.BindPassword != "" {
 		LoggerDEBUG.Printf("Performing User BindDN Search")
 		err := conn.Bind(config.BindDN, config.BindPassword)
@@ -514,7 +572,7 @@ func SearchMode(conn *ldap.Conn, config *Config) (*ldap.SearchResult, error) {
 }
 
 // ParseSearchFilter remove spaces and trailing from searchFilter.
-func ParseSearchFilter(config *Config) (string, error) {
+func ParseSearchFilter(config LdapServerConfig) (string, error) {
 	filter := config.SearchFilter
 
 	filter = strings.Trim(filter, "\n\t")
@@ -542,15 +600,21 @@ func SetLogger(level string) {
 	switch level {
 	case "ERROR":
 		LoggerERROR.SetOutput(os.Stderr)
+	case "WARNING":
+		LoggerERROR.SetOutput(os.Stderr)
+		LoggerWARNING.SetOutput(os.Stderr)
 	case "INFO":
 		LoggerERROR.SetOutput(os.Stderr)
+		LoggerWARNING.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 	case "DEBUG":
 		LoggerERROR.SetOutput(os.Stderr)
+		LoggerWARNING.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 		LoggerDEBUG.SetOutput(os.Stdout)
 	default:
 		LoggerERROR.SetOutput(os.Stderr)
+		LoggerWARNING.SetOutput(os.Stderr)
 		LoggerINFO.SetOutput(os.Stdout)
 	}
 }
@@ -566,8 +630,8 @@ func parseTlsVersion(version string) uint16 {
 	case "tls.VersionTLS13", "VersionTLS13":
 		return tls.VersionTLS13
 	default:
-		LoggerINFO.Printf("Version: '%s' doesnt match any value. Using 'tls.VersionTLS10' instead", version)
-		LoggerINFO.Printf("Please check https://pkg.go.dev/crypto/tls#pkg-constants to a list of valid versions")
+		LoggerWARNING.Printf("Version: '%s' doesnt match any value. Using 'tls.VersionTLS10' instead", version)
+		LoggerWARNING.Printf("Please check https://pkg.go.dev/crypto/tls#pkg-constants to a list of valid versions")
 		return tls.VersionTLS10
 	}
 }
