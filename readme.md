@@ -1,5 +1,5 @@
 <p align="center">
-<img src="imgs/gandalpher.png" alt="Gandalpher" title="Gandalpher" />
+<img src="https://github.com/wiltonsr/ldapAuth/raw/main/imgs/gandalpher.png" alt="Gandalpher" title="Gandalpher" />
 <br>
 <em><b>"You shall authenticate to the LDAP to pass"</b> - Gandalpher, the gopher</em>
 </p>
