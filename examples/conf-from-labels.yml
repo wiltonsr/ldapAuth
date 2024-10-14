@@ -34,10 +34,14 @@ services:
       - traefik.http.routers.whoami.middlewares=ldap_auth
       # ldapAuth Options=================================================================================
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG
-      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
       - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].weight=20
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[1].url=ldap://ldap2.forumsys.com
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[1].port=636
+      - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[1].weight=10
       # AllowedGroups and AllowedUsers are not supported with labels, because multiple value labels are separated with commas
       # SearchFilter must not escape curly braces when using labels
       # - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
