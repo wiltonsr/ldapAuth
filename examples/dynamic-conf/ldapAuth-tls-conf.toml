@@ -1,11 +1,15 @@
 [http.middlewares]
 [http.middlewares.my-ldapAuth.plugin.ldapAuth]
-Attribute = "uid"
-BaseDN = "cn=users,cn=accounts,dc=demo1,dc=freeipa,dc=org"
 Enabled = true
 LogLevel = "DEBUG"
-Port = "636"
+Attribute = "uid"
+BaseDN = "cn=users,cn=accounts,dc=demo1,dc=freeipa,dc=org"
+[[http.middlewares.my-ldapAuth.plugin.ldapAuth.ServerList]]
 Url = "ldaps://ipa.demo1.freeipa.org"
+Port = "636"
+Weight = 10
+MinVersionTLS = "tls.VersionTLS10"
+MaxVersionTLS = "tls.VersionTLS13"
 CertificateAuthority = '''
 -----BEGIN CERTIFICATE-----
 MIIFWzCCA8OgAwIBAgIBCDANBgkqhkiG9w0BAQsFADA8MRowGAYDVQQKDBFERU1P

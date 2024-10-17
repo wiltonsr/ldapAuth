@@ -41,10 +41,10 @@ whoami:
     # ldapAuth Options=================================================================
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.enabled=true
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.logLevel=DEBUG
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
-    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
     - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+    - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
     # =================================================================================
 ```
 
@@ -53,10 +53,10 @@ whoami:
 ```yml
 [...]
 labels:
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
 ```
 
 ### Search Mode Anonymous Example
@@ -64,11 +64,11 @@ labels:
 ```yml
 [...]
 labels:
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
 ```
 
 ### Search Mode Authenticated Example
@@ -76,13 +76,13 @@ labels:
 ```yml
 [...]
 labels:
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindDN=uid=tesla,dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindPassword=password
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=({{.Attribute}}={{.Username}})
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
 ```
 
 ### Advanced Search Mode Example
@@ -90,13 +90,13 @@ labels:
 ```yml
 [...]
 labels:
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.url=ldap://ldap.forumsys.com
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.port=389
-  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.attribute=uid
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.baseDN=dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindDN=uid=tesla,dc=example,dc=com
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.bindPassword=password
   - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.searchFilter=(&(objectClass=person)({{.Attribute}}={{.Username}}))
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].url=ldap://ldap.forumsys.com
+  - traefik.http.middlewares.ldap_auth.plugin.ldapAuth.serverList[0].port=389
 ```
 
 ## Operations Mode
@@ -125,17 +125,23 @@ _Optional, Default: `INFO`_
 
 Set `LogLevel` for detailed information about plugin operation.
 
-##### `url`
+##### `serverList.url`
 
 _Required, Default: `""`_
 
 LDAP server address where queries will be performed.
 
-##### `port`
+##### `serverList.port`
 
-_Optional, Default: `389`_
+_Required, Default: `389`_
 
 LDAP server port where queries will be performed.
+
+##### `serverList.weight`
+
+_Optional, Default: `0`_
+
+LDAP server weight to sort `serverList`. Higher weight, higher precedence.
 
 ##### `cacheTimeout`
 _Optional, Default: `300`_
@@ -164,52 +170,53 @@ _Optional, Default: `super-secret-key`_
 
 The key used to encrypt session cookie information. You `must` use a strong value here.
 
-##### `startTLS`
+##### `serverList.startTLS`
 _Optional, Default: `false`_
 
 If set to true, instruct `ldapAuth` to issue a `StartTLS` request when initializing the connection with the LDAP server.
 
-##### `insecureSkipVerify`
+##### `serverList.insecureSkipVerify`
 _Optional, Default: `false`_
 
 When connecting to a `ldaps` server or `startTLS` is enabled, the connection to the LDAP server is verified to be secure. This option allows `ldapAuth` to proceed and operate even for server connections otherwise considered insecure.
 
-##### `minVersionTLS`
+##### `serverList.minVersionTLS`
 _Optional, Default: `tls.VersionTLS12`_
 
 Contains the minimum TLS version that is acceptable. By default, `TLS 1.2` is currently used as the minimum. `TLS 1.0` is the minimum supported by this package.
 
 This option value must match [crypto/tls](https://pkg.go.dev/crypto/tls#pkg-constants) versions constants.
 
-##### `maxVersionTLS`
+##### `serverList.maxVersionTLS`
 _Optional, Default: `tls.VersionTLS13`_
 
 Contains the maximum TLS version that is acceptable. By default, the maximum version supported by this package is used, which is currently `TLS 1.3`.
 
 This option value must match [crypto/tls](https://pkg.go.dev/crypto/tls#pkg-constants) versions constants.
 
-##### `certificateAuthority`
+##### `serverList.certificateAuthority`
 _Optional, Default: `""`_
 
-The `certificateAuthority` option should contain one or more PEM-encoded certificates to use to establish a connection with the LDAP server if the connection uses TLS but the certificate was signed by a custom Certificate Authority.
+The `serverList.certificateAuthority` option should contain one or more PEM-encoded certificates to use to establish a connection with the LDAP server if the connection uses TLS but the certificate was signed by a custom Certificate Authority.
 
 
 Example:
 ```yml
-    certificateAuthority: |-
-        -----BEGIN CERTIFICATE-----
-        MIIB9TCCAWACAQAwgbgxGTAXBgNVBAoMEFF1b1ZhZGlzIExpbWl0ZWQxHDAaBgNV
-        BAsME0RvY3VtZW50IERlcGFydG1lbnQxOTA3BgNVBAMMMFdoeSBhcmUgeW91IGRl
-        Y29kaW5nIG1lPyAgVGhpcyBpcyBvbmx5IGEgdGVzdCEhITERMA8GA1UEBwwISGFt
-        aWx0b24xETAPBgNVBAgMCFBlbWJyb2tlMQswCQYDVQQGEwJCTTEPMA0GCSqGSIb3
-        DQEJARYAMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCJ9WRanG/fUvcfKiGl
-        EL4aRLjGt537mZ28UU9/3eiJeJznNSOuNLnF+hmabAu7H0LT4K7EdqfF+XUZW/2j
-        RKRYcvOUDGF9A7OjW7UfKk1In3+6QDCi7X34RE161jqoaJjrm/T18TOKcgkkhRzE
-        apQnIDm0Ea/HVzX/PiSOGuertwIDAQABMAsGCSqGSIb3DQEBBQOBgQBzMJdAV4QP
-        Awel8LzGx5uMOshezF/KfP67wJ93UW+N7zXY6AwPgoLj4Kjw+WtU684JL8Dtr9FX
-        ozakE+8p06BpxegR4BR3FMHf6p+0jQxUEAkAyb/mVgm66TyghDGC6/YkiKoZptXQ
-        98TwDIK/39WEB/V607As+KoYazQG8drorw==
-        -----END CERTIFICATE-----
+    ServerList:
+        CertificateAuthority: |-
+            -----BEGIN CERTIFICATE-----
+            MIIB9TCCAWACAQAwgbgxGTAXBgNVBAoMEFF1b1ZhZGlzIExpbWl0ZWQxHDAaBgNV
+            BAsME0RvY3VtZW50IERlcGFydG1lbnQxOTA3BgNVBAMMMFdoeSBhcmUgeW91IGRl
+            Y29kaW5nIG1lPyAgVGhpcyBpcyBvbmx5IGEgdGVzdCEhITERMA8GA1UEBwwISGFt
+            aWx0b24xETAPBgNVBAgMCFBlbWJyb2tlMQswCQYDVQQGEwJCTTEPMA0GCSqGSIb3
+            DQEJARYAMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCJ9WRanG/fUvcfKiGl
+            EL4aRLjGt537mZ28UU9/3eiJeJznNSOuNLnF+hmabAu7H0LT4K7EdqfF+XUZW/2j
+            RKRYcvOUDGF9A7OjW7UfKk1In3+6QDCi7X34RE161jqoaJjrm/T18TOKcgkkhRzE
+            apQnIDm0Ea/HVzX/PiSOGuertwIDAQABMAsGCSqGSIb3DQEBBQOBgQBzMJdAV4QP
+            Awel8LzGx5uMOshezF/KfP67wJ93UW+N7zXY6AwPgoLj4Kjw+WtU684JL8Dtr9FX
+            ozakE+8p06BpxegR4BR3FMHf6p+0jQxUEAkAyb/mVgm66TyghDGC6/YkiKoZptXQ
+            98TwDIK/39WEB/V607As+KoYazQG8drorw==
+            -----END CERTIFICATE-----
 ```
 
 ##### `attribute`
