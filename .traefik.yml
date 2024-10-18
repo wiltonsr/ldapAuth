@@ -12,7 +12,8 @@ bannerPath: imgs/gandalpher.png
 testData:
   Enabled: true
   LogLevel: "DEBUG"
-  Url: "ldap://example.com"
-  Port: 389
-  BaseDn: "dc=example,dc=org"
   Attribute: "uid"
+  BaseDn: "dc=example,dc=org"
+  ServerList:
+    - Url: "ldap://example.com"
+      Port: 389
