@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/gorilla/sessions"
+	"github.com/gorilla/securecookie"
 )
 
 // nolint
@@ -94,7 +95,7 @@ func CreateConfig() *Config {
 		CacheCookieName:            "ldapAuth_session_token",
 		CacheCookiePath:            "",
 		CacheCookieSecure:          false,
-		CacheKey:                   "super-secret-key",
+		CacheKey:                   "",
 		Attribute:                  "cn", // Usually uid or sAMAccountname
 		SearchFilter:               "",
 		BaseDN:                     "",
@@ -155,7 +156,16 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	logConfigParams(config)
 
 	// Create new session with CacheKey and CacheTimeout.
-	store = sessions.NewCookieStore([]byte(config.CacheKey))
+	var key []byte
+	if config.CacheKey != "" {
+		key = []byte(config.CacheKey)
+	} else {
+		key = securecookie.GenerateRandomKey(64)
+		if key == nil {
+			return nil, fmt.Errorf("Error generating random key")
+		}
+	}
+	store = sessions.NewCookieStore(key)
 	store.Options = &sessions.Options{
 		HttpOnly: true,
 		MaxAge:   int(config.CacheTimeout),

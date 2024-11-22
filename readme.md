@@ -166,9 +166,9 @@ Set to true if the session cookie should have the secure flag. The cookie will o
 ##### `cacheKey`
 Needs `traefik` >= [`v2.8.5`](https://github.com/traefik/traefik/releases/tag/v2.8.5)
 
-_Optional, Default: `super-secret-key`_
+_Optional_
 
-The key used to encrypt session cookie information. You `must` use a strong value here.
+The key used to sign session cookie information. If unset, one will be randomly generated at startup.
 
 ##### `serverList.startTLS`
 _Optional, Default: `false`_
