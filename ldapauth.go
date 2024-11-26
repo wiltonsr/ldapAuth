@@ -172,6 +172,12 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		Path:     config.CacheCookiePath,
 		Secure:   config.CacheCookieSecure,
 	}
+	// This is called in sessions.NewCookieStore using the default MaxAge. If
+	// it's not called again here, our CacheTimeout would affect only the
+	// expiration time sent in the 'set-cookie' header but not the actual check
+	// of the HMACed timestamp in the cookie, so a cookie would be accepted for
+	// 30 days.
+	store.MaxAge(store.Options.MaxAge)
 
 	return &LdapAuth{
 		name:   name,
