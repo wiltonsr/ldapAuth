@@ -22,8 +22,8 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 )
 
 // nolint
@@ -536,8 +536,15 @@ func Connect(config LdapServerConfig) (*ldap.Conn, error) {
 // SearchMode make search to LDAP and return results.
 func SearchMode(conn *ldap.Conn, config *Config) (*ldap.SearchResult, error) {
 	if config.BindDN != "" && config.BindPassword != "" {
+		// read BindPassword from disk (or mounted secret), path provided by config.BindPassword
+		b, err := os.ReadFile(config.BindPassword)
+		if err != nil {
+			return nil, fmt.Errorf("read password from BindPassword=%s: %w", config.BindPassword, err)
+		}
+		bindPassword := string(b)
+
 		LoggerDEBUG.Printf("Performing User BindDN Search")
-		err := conn.Bind(config.BindDN, config.BindPassword)
+		err = conn.Bind(config.BindDN, bindPassword)
 		if err != nil {
 			return nil, fmt.Errorf("BindDN Error: %w", err)
 		}
