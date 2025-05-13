@@ -101,9 +101,6 @@ func CreateConfig() *Config {
 		CacheCookieSecure:          false,
 		CacheKey:                   defaultCacheKey,
 		CacheKeyLabel:              "LDAP_AUTH_CACHE_KEY",
-		StartTLS:                   false,
-		CertificateAuthority:       "",
-		InsecureSkipVerify:         false,
 		Attribute:                  "cn", // Usually uid or sAMAccountname
 		SearchFilter:               "",
 		BaseDN:                     "",
