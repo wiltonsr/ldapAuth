@@ -182,7 +182,9 @@ To be consistent with other traefik plugins, the environment variable should be 
 
 Example:
 cacheKeyLabel=my_cache_key_label
-The environment variable `MY_CACHE_KEY_LABEL` or a file containing the password should be mounted to `/run/secrets/my_cache_key_label`.
+The environment variable `MY_CACHE_KEY_LABEL` will be used.
+As an alternative to passing sensitive information via environment variables, _FILE may be appended to the environment variable, causing the configuration to load the value for this variable from the defined file present in the container. Default path value is `/run/secrets/my_cache_key_label`.
+
 Typically, with docker you can use a secret named `my_cache_key_label`.
 
 The environment variable will be used if both options are set.
@@ -290,7 +292,9 @@ To be consistent with other traefik plugins, the environment variable should be 
 
 Example:
 bindPasswordLabel=my_bind_password_label
-The environment variable `MY_BIND_PASSWORD_LABEL` or a file containing the password should be mounted to `/run/secrets/my_bind_password_label`.
+The environment variable `MY_BIND_PASSWORD_LABEL` will be used.
+As an alternative to passing sensitive information via environment variables, _FILE may be appended to the environment variable, causing the configuration to load the value for this variable from the defined file in the container. Default path value is `/run/secrets/my_bind_password_label`.
+
 Typically, with docker you can use a secret named `my_bind_password_label`.
 
 The environment variable will be used if both options are set.

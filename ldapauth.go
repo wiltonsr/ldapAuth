@@ -731,9 +731,15 @@ func getSecret(label string) string {
 		return secret
 	}
 
-	b, err := os.ReadFile(fmt.Sprintf("/run/secrets/%s", strings.ToLower(label)))
+	path := fmt.Sprintf("/run/secrets/%s", strings.ToLower(label))
+
+	if os.Getenv(strings.ToUpper(label)+"_FILE") != "" {
+		path = os.Getenv(strings.ToUpper(label) + "_FILE")
+	}
+
+	b, err := os.ReadFile(path)
 	if err != nil {
-		LoggerERROR.Printf("could not load secret %s: %s", label, err)
+		LoggerWARNING.Printf("could not load secret %s: %s", label, err)
 		return ""
 	}
 	return strings.TrimSpace(string(b))
