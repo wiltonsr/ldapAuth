@@ -22,9 +22,11 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 )
+
+const defaultCacheKey = "super-secret-key"
 
 // nolint
 var (
@@ -60,11 +62,13 @@ type Config struct {
 	CacheCookiePath            string             `json:"cacheCookiePath,omitempty" yaml:"cacheCookiePath,omitempty"`
 	CacheCookieSecure          bool               `json:"cacheCookieSecure,omitempty" yaml:"cacheCookieSecure,omitempty"`
 	CacheKey                   string             `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
+	CacheKeyLabel              string             `json:"cacheKeyLabel,omitempty" yaml:"cacheKeyLabel,omitempty"`
 	Attribute                  string             `json:"attribute,omitempty" yaml:"attribute,omitempty"`
 	SearchFilter               string             `json:"searchFilter,omitempty" yaml:"searchFilter,omitempty"`
 	BaseDN                     string             `json:"baseDn,omitempty" yaml:"baseDn,omitempty"`
 	BindDN                     string             `json:"bindDn,omitempty" yaml:"bindDn,omitempty"`
 	BindPassword               string             `json:"bindPassword,omitempty" yaml:"bindPassword,omitempty"`
+	BindPasswordLabel          string             `json:"bindPasswordLabel,omitempty" yaml:"bindPasswordLabel,omitempty"`
 	ForwardUsername            bool               `json:"forwardUsername,omitempty" yaml:"forwardUsername,omitempty"`
 	ForwardUsernameHeader      string             `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 	ForwardAuthorization       bool               `json:"forwardAuthorization,omitempty" yaml:"forwardAuthorization,omitempty"`
@@ -95,12 +99,14 @@ func CreateConfig() *Config {
 		CacheCookieName:            "ldapAuth_session_token",
 		CacheCookiePath:            "",
 		CacheCookieSecure:          false,
-		CacheKey:                   "",
+		CacheKey:                   defaultCacheKey,
+		CacheKeyLabel:              "LDAP_AUTH_CACHE_KEY",
 		Attribute:                  "cn", // Usually uid or sAMAccountname
 		SearchFilter:               "",
 		BaseDN:                     "",
 		BindDN:                     "",
 		BindPassword:               "",
+		BindPasswordLabel:          "LDAP_AUTH_BIND_PASSWORD",
 		ForwardUsername:            true,
 		ForwardUsernameHeader:      "Username",
 		ForwardAuthorization:       false,
@@ -152,6 +158,19 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	})
 
 	settingDefaults(config)
+
+	if config.BindDN != "" && config.BindPassword == "" {
+		config.BindPassword = getSecret(config.BindPasswordLabel)
+	}
+
+	// if CacheKey is the default value we try to set it from secret
+	if config.CacheKey == defaultCacheKey {
+		cacheKey := getSecret(config.CacheKeyLabel)
+		// we could not retrieve the secret, so we keep the default value
+		if cacheKey != "" {
+			config.CacheKey = cacheKey
+		}
+	}
 
 	logConfigParams(config)
 
@@ -698,4 +717,26 @@ func settingDefaults(config *Config) {
 			config.ServerList[i].Port = 389
 		}
 	}
+}
+
+// retrieve a secret value from environment variable or secret on the FS
+func getSecret(label string) string {
+	secret := os.Getenv(strings.ToUpper(label))
+
+	if secret != "" {
+		return secret
+	}
+
+	path := fmt.Sprintf("/run/secrets/%s", strings.ToLower(label))
+
+	if os.Getenv(strings.ToUpper(label)+"_FILE") != "" {
+		path = os.Getenv(strings.ToUpper(label) + "_FILE")
+	}
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		LoggerWARNING.Printf("could not load secret %s: %s", label, err)
+		return ""
+	}
+	return strings.TrimSpace(string(b))
 }
