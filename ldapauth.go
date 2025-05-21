@@ -159,7 +159,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	settingDefaults(config)
 
-	logConfigParams(config)
 	if config.BindDN != "" && config.BindPassword == "" {
 		config.BindPassword = getSecret(config.BindPasswordLabel)
 	}
