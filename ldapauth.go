@@ -75,6 +75,8 @@ type Config struct {
 	ForwardExtraLdapHeaders    bool               `json:"forwardExtraLdapHeaders,omitempty" yaml:"forwardExtraLdapHeaders,omitempty"`
 	WWWAuthenticateHeader      bool               `json:"wwwAuthenticateHeader,omitempty" yaml:"wwwAuthenticateHeader,omitempty"`
 	WWWAuthenticateHeaderRealm string             `json:"wwwAuthenticateHeaderRealm,omitempty" yaml:"wwwAuthenticateHeaderRealm,omitempty"`
+	EnableCustomGroupFilter    bool               `json:"enableCustomGroupFilter,omitempty" yaml:"enableCustomGroupFilter,omitempty"`
+	CustomGroupFilter          string             `json:"customGroupFilter,omitempty" yaml:"customGroupFilter,omitempty"`
 	EnableNestedGroupFilter    bool               `json:"enableNestedGroupsFilter,omitempty" yaml:"enableNestedGroupsFilter,omitempty"`
 	AllowedGroups              []string           `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 	AllowedUsers               []string           `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
@@ -113,6 +115,8 @@ func CreateConfig() *Config {
 		ForwardExtraLdapHeaders:    false,
 		WWWAuthenticateHeader:      true,
 		WWWAuthenticateHeaderRealm: "",
+		EnableCustomGroupFilter:    false,
+		CustomGroupFilter:          "",
 		EnableNestedGroupFilter:    false,
 		AllowedGroups:              nil,
 		AllowedUsers:               nil,
@@ -424,6 +428,10 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 		"(member={{.UserDN}})" +
 		"(uniqueMember={{.UserDN}})" +
 		"(memberUid={{.Username}})" +
+		"{{if .EnableCustomGroupFilter}}" +
+		"({{.CustomGroupFilter}}={{.UserDN}})" +
+		"({{.CustomGroupFilter}}={{.Username}})" +
+		"{{end}}" +
 		"{{if .EnableNestedGroupFilter}}" +
 		"(member:1.2.840.113556.1.4.1941:={{.UserDN}})" +
 		"{{end}}" +
@@ -435,7 +443,9 @@ func LdapCheckUserGroups(conn *ldap.Conn, config *Config, entry *ldap.Entry, use
 			UserDN                  string
 			Username                string
 			EnableNestedGroupFilter bool
-		}{ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), config.EnableNestedGroupFilter})
+			EnableCustomGroupFilter bool
+			CustomGroupFilter       string
+		}{ldap.EscapeFilter(entry.DN), ldap.EscapeFilter(username), config.EnableNestedGroupFilter, config.EnableCustomGroupFilter, config.CustomGroupFilter})
 
 	LoggerDEBUG.Printf("Group Filter: '%s'", group_filter.String())
 
