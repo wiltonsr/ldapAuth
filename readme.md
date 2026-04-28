@@ -336,6 +336,18 @@ _Optional, Default: `""`_
 
 The name of the realm to specify in the `WWW-Authenticate` header. This option is ineffective unless the `wwwAuthenticateHeader` option is set to true.
 
+##### `enableCustomGroupFilter`
+
+_Optional, Default: `false`_
+
+If you need custom filters in addition to `(|(member=?)(uniqueMember=?)(memberUid=?))`, enable this option and set `customGroupFilter` option.
+
+##### `customGroupFilter`
+
+_Optional, Default: `""`_
+
+Custom filters in addition to `(|(member=?)(uniqueMember=?)(memberUid=?))`. This option is ineffective unless the `enableCustomGroupFilter` option is set to true.
+
 ##### `enableNestedGroupFilter`
 
 _Optional, Default: `false`_
